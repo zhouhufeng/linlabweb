@@ -1,0 +1,8 @@
+This diabetes.dat is the diabetes data  given in Appendix A of Hastie and
+Tibshirani (1990), see Appendix A for the background of the data
+
+Variable names:
+
+age
+base_deficit
+c_peptide

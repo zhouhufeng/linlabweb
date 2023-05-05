@@ -1,0 +1,397 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+<title>Xihong Lin's Group @ Harvard School of Public Health</title>
+<meta name="keywords" content="Xihong Lin, Harvard University, Harvard School of Public Health, HSPH, Biostatistics">
+<meta name="description" content="Professor Xihong Lin's group at Department of Biostatistics, Harvard School of Public Health">
+<link rel="stylesheet" type="text/css" href="css/mystyle.css">
+</head>
+
+<body>
+
+<div class="page">
+
+<div class="banner" id="top"></div>
+
+
+<div class="navpart"> 
+	<ul class="navbar">
+	<li><a href="index.html" class="nav">Home</a></li>
+	<li><a href="research.html" class="nav">Research</a></li>
+	<li><a href="people.html" class="nav">People</a></li>
+	<li><a href="publications.html" class="nav">Publications</a></li>
+	<li><a href="software.html" class="currentnav">Software</a></li>
+	<li><a href="data.html" class="nav">Data</a></li>
+	<li><a href="links.html" class="nav">Links</a></li>
+	</ul>
+</div>
+
+<div class="listbar">
+	<ul class="listbox">
+	<li class="group"><a href="#set" class="gjumpto">SKAT</a></li>
+	<li><a href="#MetaSKAT" class="jumpto">MetaSKAT</a></li>
+	<li><a href="#CEPSKAT" class="jumpto">CEPSKAT</a></li>
+	<li class="group"><a href="#coxkm" class="gjumpto">coxKM</a></li>
+	<li class="group"><a href="#gmmat" class="gjumpto">GMMAT</a></li>
+	<li class="group"><a href="#mpat" class="gjumpto">MPAT</a></li>
+<li class="group"><a href="#scang" class="gjumpto">SCANG</a></li>
+<li class="group"><a href="#staar" class="gjumpto">STAAR</a></li>
+<li class="group"><a href="#staarpipeline" class="gjumpto">STAARpipeline</a></li>
+<li class="group"><a href="#staarpipelinesummary" class="gjumpto">STAARpipelineSummary</a></li>
+<li class="group"><a href="#metastaar" class="gjumpto">MetaSTAAR</a></li>
+<li class="group"><a href="#acat" class="gjumpto">ACAT</a></li>
+	<li class="group"><a href="#smat" class="gjumpto">SMAT</a></li>
+	<li class="group"><a href="#TEtest" class="gjumpto">TEtest</a></li>
+	<li class="group"><a href="#iGWAS" class="gjumpto">iGWAS</a></li>
+	<li class="group"><a href="#spca" class="gjumpto">Sparse PCA</a></li>
+	<li class="group">Genetic Pathway</li>
+	<li><a href="#slda" class="jumpto">sLDA</a></li>
+	<li><a href="#logk" class="jumpto">Logistic KM</a></li>
+	<li><a href="#link" class="jumpto">Linear KM</a></li>
+	<li class="group">Nonparametric Regression</li>
+	<li><a href="#spmm" class="jumpto">SPMM</a></li>
+	<li><a href="#mixed" class="jumpto">Spline_Mixed</a></li>
+	<li><a href="#gamm" class="jumpto">GAMM1</a></li>
+	</ul>
+</div>
+
+
+<div class="main">
+
+<div id="set"><h2>SKAT (SNP Set/Sequence Association Test)</h2></div>
+			
+<div class="soft">
+			
+<a href="http://www.hsph.harvard.edu/research/skat/index.html" skat"="">SKAT</a> is a R package  for performing
+
+<p>(1) Association tests between a set of common and rare SNPs
+ and continuous and dichotomous (case-control) phenotypes using kernel machine methods for data from GWAS and genome-wide 
+sequencing association studies </p>
+
+<p>(2) Sample size and power calculatons for sequencing association studies. </p>
+
+
+<p><b>References:</b></p>
+<ul>
+	<li>Lee, Seunggeun, et al. (2012). <a href="pub/SmallSampleSKATfinal.pdf">Optimal Unified Approach for Rare-Variant Association Testing with Application to Small-Sample Case-Control Whole-Exome Sequencing Studies </a>. <i> The American Journal of Human Genetics, </i>91.2, 224-237.   </li>
+
+	<li>Lee, S., Wu, M.C. and Lin, X. (2012). <a href="pub/SKAT-O-Paper_Main.pdf">Optimal tests for rare variant effects in
+sequencing association studies</a>. <i>Biostatistics</i>, 13.4, 762-775. <a href="pub/SKAT-O-Paper-supplemental.pdf">Supplementary Materials</a>.</li>
+	<li> Wu, M. C., Lee, S., Cai, T., Li, Y., Boehnke, M. and Lin, X (2011) <a href="pub/SKAT-paper-and-supplement.pdf"> Rare Variant Association Testing for Sequencing Data Using the Sequence Kernel Association Test  (SKAT). </a> <i> American Journal of Human Genetics,  </i>, 89.1, 82-93.</li>
+	<li> Wu, M. C., Kraft, P., Epstein, M. P.,Taylor, D., M., Chanock, S. J., Hunter, D., J., and Lin, X. (2010) <a href="pub/gwas-kmtest.pdf"> Powerful SNP Set Analysis for Case-Control GenomeWide 
+Association Studies.</a> <i> American Journal of Human Genetics, </i>, 86, 929-942. </li>
+</ul>
+
+</div>
+
+
+<div id="MetaSKAT"><h3> MetaSKAT (Meta-analysis for multiple markers)</h3></div>
+<div class="soft">
+
+<p>
+<a href="http://www.hsph.harvard.edu/research/skat/metaskat" skat"="">MetaSKAT</a> is a R package for multiple marker meta-analysis across studies. It can carry out meta-analysis of SKAT, SKAT-O and burden tests with individual level genotype data or gene level summary statistics.
+</p>
+<p><b>References:</b></p>
+<ul>
+ <li> Lee, S., Teslovich, T.M., Boehnke, M. and Lin, X. (2013)  General framework for meta-analysis of rare variants in sequencing association studies, <i> American Journal of Human Genetics</i>, in press.
+</ul>
+</div>
+
+
+<div id="CEPSKAT"><h3>CEPSKAT (Continuous Extreme Phenotype SKAT)</h3></div>
+
+<div class="soft">
+<p>
+CEPSKAT extends the SKAT framework to the setting of continuous extreme phenotype samples. You can download the <a href="dat/CEPSKAT_1.0.tar.gz">R package</a> for CEPSKAT here. For Windows, download the <a href="dat/CEPSKAT_1.0.zip">compiled binary version</a> instead. Consult the help files in the package for instruction and examples of usage.
+</p>
+<p><b>References:</b></p>
+<ul>
+	<li>Barnett, I., Lee, S., Lin, X. (2012)<a href="pub/CEPSKATmanu+supp.pdf"> Detecting Rare Variant Effects Using Extreme Phenotype Sampling in Sequencing Association Studies </a>. <i> Genetic Epidemiology </i>. In press.
+</ul> 
+</div>
+
+<div id="coxkm"><h3>coxKM (cox Kernel Machine) </h3></div>
+
+<div class="soft">
+<p>coxKM (cox Kernel Machine) is an R package for conducting SNP-set association tests for right-censored survival outcomes based on kernel machine cox regression framework. coxKM is meant for common genetic variants only. coxKM tests for association between a SNP-set (made up of common variants) and a right-censored survival outcome. <a href="dat/coxKM_0.3.tar.gz"> Software download </a>, <a href="dat/coxKM-manual.pdf"> manual download </a>.
+</p>
+<p><b>References:</b></p>
+<ul>
+<li>Lin X, Cai T, Wu M, Zhou Q, Liu G, Christiani D and Lin X. 2011.
+Survival Kernel Machine SNP-set Analysis for Genome-wide AssociationStudies. Genetic Epidemiology 35:620-31. doi: 10.1002/gepi.20610
+<li>Cai T, Tonini G and Lin X. 2011. Kernel machine approach to testing
+the significance of multiple genetic markers for risk prediction.
+Biometrics, 67:975-86. doi:10.1111/j.1541-0420.2010.01544.x
+</ul>
+</div>
+
+<div id="gskat"><h3>gSKAT (family based association test) </h3></div>
+
+<div class="soft">
+<p>gskat is a R package implements a family based association test via GEE Kernel Machine (KM) score test. It has functions to perform both burden test and SKAT test with family members as well as unrelated individuals. The package allows for both continuous and discrete traits in the association test.<a href="https://github.com/xfwang/">Software download </a>
+</p>
+<p>
+User groups:
+
+Feel free to join in the group to ask / discuss / comment about the package on the <a href="https://groups.google.com/forum/#!forum/gskat-discussion-group">forum</a>.
+</p>
+<p><b>References:</b></p>
+<ul>
+<li> Wang X, Lee S, Zhu X, Redline S, and Lin X. (2013) GEE-Based SNP Set Association Test for Continuous and Discrete Traits in Family-Based Association Studies. Genet Epidemiol.?7:778-86.
+</ul>
+
+</div>
+
+<div id="iskat"><h3>iSKAT/GESAT </h3></div>
+
+<div class="soft">
+<p> <a href="dat/iSKAT_1.2.tar.gz"> Software download </a>, <a href="dat/iSKAT-manual.pdf"> Manual download </a>.
+</p>
+<p><b>References:</b></p>
+<ul>
+<li>Lin, X., Lee, S.,Wu, M.,Wang, C., Chen H., Li, Z. and Lin, X. <a href="dat/iSKAT-v20posted.pdf">Test for
+rare variants by environment interactions in sequencing association
+studies.</a> Biometrics, in press.
+<li>Lin, X., Lee, S., Christiani, D. C., and Lin, X. (2013). Test for the Interaction between a Genetic Marker Set and Environment in Generalized Linear Models. Biostatistics, 14: 667-681.
+doi:10.1093/biostatistics/kxt006.
+</ul>
+</div>
+
+
+<div id="gmmat"><h2>GMMAT (Generalized linear Mixed Model Association Test)</h2></div>
+
+<div class="soft">
+<p><a href="https://github.com/hanchenphd/GMMAT">GMMAT</a> is an R package for performing genetic association tests in genome-wide association studies (GWAS) and sequencing association studies, for outcomes with distribution in the exponential family (e.g. binary outcomes) based on generalized linear mixed models (GLMMs). It can be used to analyze genetic data from individuals with population structure and relatedness. GMMAT fits a GLMM with covariate adjustment and random effects to account for population structure and familial or cryptic relatedness. For GWAS, GMMAT performs score tests for each genetic variant. For candidate gene studies, GMMAT can also perform Wald tests to get the effect size estimate for each genetic variant. For rare variant analysis from sequencing association studies, GMMAT performs the variant Set Mixed Model Association Tests (SMMAT), including the burden test, the sequence kernel association test (SKAT), SKAT-O and an efficient hybrid test of the burden test and SKAT, based on user-defined variant sets. See user manual <a href="https://github.com/hanchenphd/GMMAT/blob/master/inst/doc/GMMAT.pdf"> here</a>.
+
+
+<p><b>References:</b></p>
+<ul>
+	<li>Breslow NE and Clayton DG. (1993) Approximate Inference in Generalized Linear Mixed Models. <i>Journal of the American Statistical Association</i> 88: 9-25.
+	<li>Chen H, Wang C, Conomos MP, Stilp AM, Li Z, Sofer T, Szpiro AA, Chen W, Brehm JM, Celedon JC, Redline S, Papanicolaou GJ, Thornton TA, Laurie CC, Rice K and Lin X. (2016) Control for Population Structure and Relatedness for Binary Traits in Genetic Association Studies Using Logistic Mixed Models. <i>The American Journal of Human Genetics</i> 98(4): 653-666.
+	<li>Han Chen, Jennifer E. Huffman, Jennifer A. Brody, Chaolong Wang, Seunggeun Lee, Zilin Li, Stephanie M. Gogarten, Tamar Sofer, Lawrence F. Bielak, Joshua C. Bis, John Blangero, Russell P. Bowler, Brian E. Cade, Michael H. Cho, Adolfo Correa, Joanne E. Curran, Paul S. de Vries, David C. Glahn, Xiuqing Guo, Andrew D. Johnson, Sharon Kardia, Charles Kooperberg, Joshua P. Lewis, Xiaoming Liu, Rasika A. Mathias, Braxton D. Mitchell, Jeffrey R. O'Connell, Patricia A. Peyser, Wendy S. Post, Alex P. Reiner, Stephen S. Rich, Jerome I. Rotter, Edwin K. Silverman, Jennifer A. Smith, Ramachandran S. Vasan, James G. Wilson, Lisa R. Yanek, NHLBI Trans-Omics for Precision Medicine (TOPMed) Consortium, TOPMed Hematology and Hemostasis Working Group, Susan Redline, Nicholas L. Smith, Eric Boerwinkle, Ingrid B. Borecki, L. Adrienne Cupples, Cathy C. Laurie, Alanna C. Morrison, Kenneth M. Rice, Xihong Lin. (2018) Efficient variant set mixed model association tests for continuous and binary traits in large-scale whole genome sequencing studies. Submitted. </ul>
+
+</div>
+
+<div id="mpat"><h2>MPAT (Multiple Phenotype Association Test)</h2></div>
+
+<div class="soft">
+<p><a href="dat/MPAT_1.0.tar.gz">MPAT</a> is an R package for performing multiple phenotype association tests based on univarite GWAS summary statistics. It provides a toolkit of testing procedures to aggregate association evidence across multiple phenotypes for a given genetic variant. All the p-values can be efficiently computed. See user manual <a href="dat/MPAT-manual.pdf"> here</a>.
+
+
+<p><b>References:</b></p>
+<ul>
+	<li>Liu Z and Lin X. (2016) Multiple Phenotype Association Test using Summary statistics in Genome-wide Association Studies. Submitted.
+	<li>Liu Z and Lin X. (2016) A Geometric Perspective on the Powers of Principal Component Association Tests in Multiple Phenotype Studies. To be submitted.
+</ul>
+
+</div>
+
+<div id="scang"><h2>SCANG (SCAN the Genome)</h2></div>
+
+<div class="soft">
+<p><a href="https://github.com/zilinli1988/SCANG">SCANG</a>  is an R package for performing a flexible and computationally efficient scan statistic procedure (SCANG) that uses the p-value of a variant set-based test as a scan statistic of each moving window, to detect rare variant association regions for both continuous and dichotomous traits. The goal of SCANG is to detect whether any rare-variant association region exists across the genome, and if they do exist, to identify the locations and sizes of these association regions. Specifically, SCANG first fits the null linear or logistic model that includes covariates, e.g., age, sex and ancestry PCs, but no genetic variants. Second, SCANG applies set-based tests to all possible candidate moving windows of different sizes within a pre-specified window range of practical interest. Three tests are included in the SCANG framework: the burden test (SCANG-B), SKAT (SCANG-S) and an efficient omnibus test to aggregate information of the burden test and SKAT and different choices of weights using the ACAT method (SCANG-O). Third, SCANG generates an empirical threshold calculated by Monte Carlo simulation, to control the Genome-wise/Family-wise Type I Error Rate (GWER/FWER) at a given level, e.g., 0.05. The windows with the p-values smaller than this threshold are detected as genome-wise significant association regions. Both individual-window p-values and the genome-wise/family-wise p-values of these genome-wise significant windows are given. 
+See user manual <a href="dat/SCANG-manual-v1.0.1.pdf"> here</a>.
+
+
+<p><b>References:</b></p>
+<ul>
+	<li>Zilin Li, Xihao Li, Yaowu Liu, Jincheng Shen, Han Chen, Alanna C. Morrison, Eric Boerwinkle and Xihong Lin. (2019) Dynamic Scan Procedure for Detecting Rare-Variant Association Regions in Whole Genome Sequencing Studies. <i>The American Journal of Human Genetics</i> 104(5): 802-814.
+	
+</ul>
+
+
+</div>
+
+<div id="staar"><h2>STAAR (variant-Set Test for Association using Annotation infoRmation)</h2></div>
+
+<div class="soft">
+<p><a href="https://github.com/xihaoli/STAAR">STAAR</a> is an R package for performing variant-Set Test for Association using Annotation infoRmation (STAAR) procedure in whole genome sequencing studies. STAAR is a general framework that incorporates both qualitative functional categories and quantitative complementary functional annotation scores using an omnibus multi-dimensional weighting scheme.
+See user manual <a href="dat/STAAR-manual.pdf"> here</a>.
+
+
+<p><b>References:</b></p>
+<ul>
+	<li>Li X*, Li Z*, Zhou H, Gaynor SM, Liu Y, Chen H, Sun R, Dey R, Arnett DK, Aslibekyan S, Ballantyne CM, Bielak LF, Blangero J, Boerwinkle E, Bowden DW, Broome JG, Conomos MP, Correa A, Cupples LA, Curran JE, Freedman BI, Guo X, Hindy G, Irvin MR, Kardia SLR, Kathiresan S, Khan AT, Kooperberg CL, Laurie CC, Liu XS, Mahaney MC, Manichaikul AW, Martin LW, Mathias RA, McGarvey ST, Mitchell BD, Montasser ME, Moore JE, Morrison AC, O'Connell JR, Palmer ND, Pampana A, Peralta JM, Peyser PA, Psaty BM, Redline S, Rice KM, Rich SS, Smith JA, Tiwari HK, Tsai MY, Vasan RS, Wang FF, Weeks DE, Weng Z, Wilson JG, Yanek LR, NHLBI Trans-Omics for Precision Medicine (TOPMed) Consortium, TOPMed Lipids Working Group, Neale BM, Sunyaev SR, Abecasis GR, Rotter JI, Willer CJ, Peloso GM, Natarajan P, & Lin X. (2020). Dynamic incorporation of multiple in silico functional annotations empowers rare variant association analysis of large whole-genome sequencing studies at scale. <i>Nature Genetics, 52(9), 969-983</i>
+</ul>
+
+</div>
+
+<div id="staarpipeline"><h2>STAARpipeline</h2></div>
+
+<div class="soft">
+<p><a href="https://github.com/xihaoli/STAARpipeline">STAARpipeline</a> is an R package for phenotype-genotype association analyses of WGS/WES data, including single variant analysis and variant set analysis. The single variant analysis in STAARpipeline provides valid individual *P* values of variants given a MAF or MAC cut-off. The variant set analysis in STAARpipeline includes gene-centric analysis and non-gene-centric analysis of rare variants. The gene-centric coding analysis provides five genetic categories: putative loss of function (pLoF), missense, disruptive missense, pLoF and disruptive missense, and synonymous. The gene-centric noncoding analysis provides eight genetic categories: promoter or enhancer overlaid with CAGE or DHS sites, UTR, upstream, downstream, and noncoding RNA genes. The non-gene-centric analysis includes sliding window analysis with fixed sizes and dynamic window analysis with data-adaptive sizes. STAARpipeline also provides analytical follow-up of dissecting association signals independent of known variants via conditional analysis using <a href="https://github.com/xihaoli/STAARpipelineSummary">STAARpipelineSummary</a>.
+See user manual <a href="dat/STAARpipeline-manual.pdf"> here</a>.
+
+<p><b>References:</b></p>
+<ul>
+	<li>Li Z*#, Li X*, Zhou H, Gaynor SM, Selvaraj MS, Arapoglou T, Quick C, Liu Y, Chen H, Sun R, Dey R, Arnett DK, Auer PL, Bielak LF, Bis JC, Blackwell TW, Blangero J, Boerwinkle E, Bowden DW, Brody JA, Cade BE, Conomos MP, Correa A, Cupples LA, Curran JE, de Vries PS, Duggirala R, Franceschini N, Freedman BI, G?ring HHH, Guo X, Kalyani RR, Kooperberg C, Kral BG, Lange LA, Lin BM, Manichaikul A, Manning AK, Martin LW, Mathias RA, Meigs JB, Mitchell BD, Montasser ME, Morrison AC, Naseri T, O¡¯Connell JR, Palmer ND, Peyser PA, Psaty BM, Raffield LM, Redline S, Reiner AP, Reupena MS, Rice KM, Rich SS, Smith JA, Taylor KD, Taub MA, Vasan RS, Weeks DE, Wilson JG, Yanek LR, Zhao W, NHLBI Trans-Omics for Precision Medicine (TOPMed) Consortium, TOPMed Lipids Working Group, Rotter JI, Willer CJ, Natarajan P, Peloso GM, & Lin X.# (2022). A framework for detecting noncoding rare-variant associations of large-scale whole-genome sequencing studies.<i>Nature Methods, 19(12), 1599-1611</i>
+</ul>
+
+</div>
+
+<div id="staarpipelinesummary"><h2>STAARpipelineSummary</h2></div>
+
+<div class="soft">
+<p><a href="https://github.com/xihaoli/STAARpipelineSummary">STAARpipelineSummary</a> is an R package for summarizing and visualizing association analysis results generated by <a href="https://github.com/xihaoli/STAARpipeline">STAARpipeline</a>.
+See user manual <a href="dat/STAARpipelineSummary-manual.pdf"> here</a>.
+
+<p><b>References:</b></p>
+<ul>
+	<li>Li Z*#, Li X*, Zhou H, Gaynor SM, Selvaraj MS, Arapoglou T, Quick C, Liu Y, Chen H, Sun R, Dey R, Arnett DK, Auer PL, Bielak LF, Bis JC, Blackwell TW, Blangero J, Boerwinkle E, Bowden DW, Brody JA, Cade BE, Conomos MP, Correa A, Cupples LA, Curran JE, de Vries PS, Duggirala R, Franceschini N, Freedman BI, G?ring HHH, Guo X, Kalyani RR, Kooperberg C, Kral BG, Lange LA, Lin BM, Manichaikul A, Manning AK, Martin LW, Mathias RA, Meigs JB, Mitchell BD, Montasser ME, Morrison AC, Naseri T, O¡¯Connell JR, Palmer ND, Peyser PA, Psaty BM, Raffield LM, Redline S, Reiner AP, Reupena MS, Rice KM, Rich SS, Smith JA, Taylor KD, Taub MA, Vasan RS, Weeks DE, Wilson JG, Yanek LR, Zhao W, NHLBI Trans-Omics for Precision Medicine (TOPMed) Consortium, TOPMed Lipids Working Group, Rotter JI, Willer CJ, Natarajan P, Peloso GM, & Lin X.# (2022). A framework for detecting noncoding rare-variant associations of large-scale whole-genome sequencing studies.<i>Nature Methods, 19(12), 1599-1611</i>
+</ul>
+
+</div>
+
+
+<div id="metastaar"><h2>MetaSTAAR (Meta-analysis of variant-Set Test for Association using Annotation infoRmation)</h2></div>
+
+<div class="soft">
+<p><a href=" https://github.com/xihaoli/MetaSTAAR">MetaSTAAR</a> is an R package for performing Meta-analysis of variant-Set Test for Association using Annotation infoRmation (MetaSTAAR) procedure in whole-genome sequencing (WGS) studies.
+See user manual <a href="dat/MetaSTAAR-manual.pdf"> here</a>.
+
+<p><b>References:</b></p>
+<ul>
+	<li>Li X, Quick C, Zhou H, Gaynor SM, Liu Y, Chen H, Selvaraj MS, Sun R, Dey R, Arnett DK, Bielak LF, Bis JC, Blangero J, Boerwinkle E, Bowden DW, Brody JA, Cade BE, Correa A, Cupples LA, Curran JE, de Vries PS, Duggirala R, Freedman BI, G?ring HHH, Guo X, Haessler J, Kalyani RR, Kooperberg C, Kral BG, Lange LA, Manichaikul A, Manning AK, Martin LW, McGarvey ST, Mitchell BD, Montasser ME, Morrison AC, Naseri T, O¡¯Connell JR, Palmer ND, Peyser PA, Psaty BM, Raffield LM, Redline S, Reiner AP, Reupena MS, Rice KM, Rich SS, Sitlani CM, Smith JA, Taylor KD, Vasan RS, Willer CJ, Wilson JG, Yanek LR, Zhao W, NHLBI Trans-Omics for Precision Medicine (TOPMed) Consortium, TOPMed Lipids Working Group, Rotter JI, Natarajan P, Peloso GM, Li Z#, & Lin X#. (2023). Powerful, scalable and resource-efficient meta-analysis of rare variant associations in large whole genome sequencing studies.<i>Nature Genetics, 55(1), 154-164</i>
+</ul>
+
+
+</div>
+
+
+
+<div id="acat"><h2>ACAT (Aggregated Cauchy Association Test)</h2></div>
+
+<div class="soft">
+<p><a href="https://github.com/yaowuliu/ACAT">ACAT</a>  is an R package for implement a generic method for combining p-values. For example, if ACAT is used to combine the variant-level (or SNV-level) p-values, it is a set-based test that is particularly powerful when only a small proportion of variants are casual. ACAT can also be used as an omnibus testing procedure to combine multiple set-level p-values, e.g., the p-values of SKAT or burden tests. The p-value of ACAT is approximated by a Cauchy distribution without the need to know the dependency of the p-values combined by ACAT, which makes the computation of ACAT super fast. This approximation is particularly accurate in the tail of the null distribution.
+
+
+<p><b>References:</b></p>
+<ul>
+	<li>Liu, Y., Chen, S., Li, Z., Morrison, A. C., Boerwinkle, E., & Lin, X. (2019). ACAT: A Fast and Powerful p Value Combination Method for Rare-Variant Analysis in Sequencing Studies. The American Journal of Human Genetics,104(3), 410-421.
+
+	
+</ul>
+
+</div>
+
+
+
+<div id="smat"><h2>SMAT (Scaled Multiple-phenotype Association Test)</h2></div>
+
+<div class="soft">
+SMAT is an R package for performing the Scaled Multiple-phenotype Association Test in cohort or case-control designs to assess common effect of a single nucleotide polymorphism (SNP) on multiple (positively correlated) continuous outcomes measuring the same underlying trait.
+<p>The current version of the R package is 0.98. Please download the <a href="dat/SMAT_0.98.tar.gz">source .tar.gz file</a> or the <a href="dat/SMAT_0.98.zip">.zip file</a> for installation. Please download the <a href="dat/SMAT-manual.pdf">manual PDF here</a>. <a href="dat/SMAT_example.zip">Some example files</a> are also available for download.</p>
+<p><b>References:</b></p>
+<ul>
+	<li>Schifano, E.D., Li, L., Christiani, D.C., and Lin, X. (2012) Genome-wide Association Analysis for Multiple Continuous Secondary Phenotypes. (in revision)
+	<li>Roy, J., Lin, X., and Ryan, L. (2003). Scaled Marginal Models For Multiple Continuous Outcomes. <i>Biostatistics</i>, 4, 371-384.
+</ul>
+
+</div>
+
+
+
+<div id="TEtest"><h2>TEtest</h2></div>
+
+<div class="soft">
+TEtest is an R package for conducting integrated analyses of a set of SNPs as well as a gene expression. The program is able to test the overall effect regardless it is from SNPs or gene expression. The testing procedure accommodates various candidate models: SNP-only model, main effect model and main effect plus interaction model. 
+<p><a href="dat/TEtest_V0.zip">Software download here.</a> </p>
+<p><b>References:</b></p>
+<ul>
+	<li> Huang YT, VanderWeele TJ and Lin X (2012) (2014). Joint analysis of SNP and gene expression data in genetic association studies of complex diseases. Annals of Applied Statistics 2014; 8:352-376. 	<li>Roy, J., Lin, X., and Ryan, L. (2003). Scaled Marginal Models For Multiple Continuous Outcomes. <i>Biostatistics</i>, 4, 371-384.
+</ul>
+</div>
+
+
+
+<div id="iGWAS"><h2>iGWAS</h2></div>
+
+<div class="soft">
+iGWAS is an R package for conducting mediation analyses for an eQTL SNP set and a gene expression. The testing procedure examines the effect of eQTL SNPs on a dichotomous outcome mediated through gene expression (indirect effect) and the effect independent of gene expression (direct effect). The method accommodates models with and without SNPs-by-gene expression interaction, and includes an omnibus test to select the optimal model using perturbation. The procedure also incorporates family-design where subjects are not independent. <p>
+<p><a href="dat/iGWAS_v1.zip">Software download here.</a> </p>
+<p><b>References:</b></p>
+<ul>
+	<li>Huang YT, Liang L, Cookson W OCM, Moffatt M and Lin X (2015). iGWAS: integrative genome-wide association studies using mediation analysis. Genetic Epidemiology 2015; 39:347-356. </ul>
+
+</div>
+
+
+
+
+<div id="spca"><h2>Sparse PCA</h2></div>
+
+<div class="soft">
+
+<a href="dat/SparsePCA_ftn.r">R functions</a> for sparse PCA and some <a href="dat/SparsePCA_example.r">examples</a>.
+
+<p><b>References:</b></p>
+<ul>
+	<li>Lee, S., Epstein, M.P., Duncan, R. and Lin, X. (2012) Sparse principal component analysis for identifying ancestry-informative markers in genome-wide association studies. <i> Genetic Epidemiology </i>, 36.4, 293-302.</li>
+</ul>
+
+</div>
+	
+<h2>Pathway Analysis</h2>
+
+<div class="soft">
+
+<div id="slda"><h3>sLDA Pathway Test</h3></div>
+
+An <a href="http://www.bios.unc.edu/%7Emwu/software/">R function</a> for testing for differential expression of a gene set/pathway based on the sparse linear discriminant analysis approach.
+
+<div id="logk"><h3>Logistic Kernel Machine</h3></div>
+
+A <a href="dat/logistic_kernel_machine_semiparametric_regression.sas">SAS Macro</a> for estimating and testing for the effect of a genetic pathway on a disease outcome using logistic kernel machine regression via logistic mixed models.
+
+<div id="link"><h3>Least Square Kernel Machine</h3></div>
+
+A <a href="dat/kernel_machine_semiparametric_regression.sas">SAS Macro</a> for doing semiparametric regression of multi-dimensional genetic pathway data, using least squares kernel machines and linear mixed models.
+
+<p><b>References:</b></p>
+<ul>
+	<li>Wu, M.,C., Zhang, L., Wang, Z., Christiani, D. C., Lin, Sparse linear discriminant analysis for simultaneous gene set/pathway significance test and gene selection. , Bioinformatics, , 25,1145-1151.</li>
+	<li>Liu, D., Ghosh, D. and Lin, X. (2008) Estimation and Testing for the Effect of a Genetic Pathway on a Disease Outcome Using Logistic Kernel Machine Regression via Logistic Mixed Models. BMC Bioinformatics, 9, 292.</li>
+	<li>Liu, D., Lin, X. and Ghosh, D. (2007) Semiparametric Regression of Multi-Dimensional Genetic Pathway Data: Least Squares Kernel Machines and Linear Mixed Models. Biometrics, 63, 1079-1088.</li>
+</ul>
+
+</div>
+
+<h2>Nonparametric Regression</h2>
+
+<div class="soft">
+
+<div id="spmm"><h3>SAS Macro SPMM</h3></div>
+
+A <a href="dat/spmm.mac">SAS Macro</a> to fit smoothing splines mixed models, with <a href="dat/spmm.txt">documentation</a>.
+
+<div id="mixed"><h3>SAS Macro Spline_Mixed</h3></div>
+
+A <a href="dat/spline_mixed.sas">SAS Macro</a> for calculating a cubic smoothing spline using PROC MIXED.
+
+<div id="gamm"><h3>SAS Macro GAMM1</h3></div>
+
+A <a href="dat/gamm1.mac">SAS Macro</a> to fit generalized additive mixed models using smoothing splines.
+
+<p><b>References:</b></p>
+<ul>
+	<li>Zhang D., Lin X., Raz J., and Sowers M. (1998). Semiparametric stochastic mixed models for longitudinal data, Journal of the American Statistical Association, 93, 710-719.</li>
+	<li>Lin X. and Zhang D. (1999). Inference in generalized additive mixed models using smoothing splines, Journal of the Royal Statistical Society, Series B, 61, 381-400.</li>
+	<li>Zhang D., Lin X. and Sowers M. (2000). Periodic semiparametric regression for longitudinal hormone data from multiple menstrual cycles. Biometrics, , 56, 31-39.</li> 
+</ul>
+
+</div>
+
+</div>
+
+
+<div class="footnote">
+Copyright &copy; Xihong Lin, 2010-2023
+</div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,681 @@
+ 
+
+
+                          Macro name: %spmm
+
+
+              ~~~~~~~~ SEMI-PARAMETRIC MIXED MODELS ~~~~~~~~
+
+
+                             Version 1.0
+
+
+                              Function: 
+
+    This macro fits the following model to longitudinal Gaussian data:
+
+         Yij = Xij*beta + f(tij) + Zij*bi + Ui(tij) + esp(ij),
+
+  where beta is parametric fixed effects, f(.) is a smooth function, bi
+  is random effects, Ui(.) is a Gaussian process, esp(ij) is the
+  measurement error. Maximum penalized likelihood was used to estimate
+  the beta and f(.), while smoohting parameter and the parameters in the
+  variance matrix are estimated by REML method, which treats f(.) as an
+  integrated Wiener process. 
+
+
+
+
+                          Macro developer: 
+
+                            Daowen Zhang
+                     Department of Biostatistics
+                     The University of Michigan
+                        Ann Arbor, MI 48109
+                      E-mail: dzhang@umich.edu
+
+
+                         (C) Daowen Zhang
+ 
+                        Date: April 17, 1996
+
+
+
+
+  Call statement:
+                                           Default
+  %spmm(data=,
+        dep=,
+        fixed=,
+        smthvar=,
+        smooth=,
+        method=,
+        lintest=,
+        random=,
+        process=,
+        time=,
+        gt=,
+        g1t=,
+        g2t=,
+        id=,
+        msrerr=,                           {Y}
+        maxiter=,                          {50}
+        conv=,                             {0.00001}
+        print=                             {Y}
+        outbeta= 
+        outbstd=  
+        outvar=
+        outvstd=
+        outran_F=
+        outran_B=   
+        outprs=                                                
+        outsmth=  
+        outband= 
+        outscore=
+        symsize=                           {1022976} 
+        worksize=                          {1022976})
+
+
+
+  where 
+        data     = name of the data set to be used;
+        dep      = dependent variable (Y);
+        fixed    = fixed effects covariates (X); NO INTERCEPT !
+                   /s -- print the solution;
+        smthvar  = covariate that needs smoothed (t); if missing, a linear mixed
+                   model is fitted.
+        smooth   = 1/smoothing parameter, can be missing;
+        lintest  = Y/N -- request the performance of linearity test based on
+                   the score test statistics for f(t) or the first covariate
+                   in X if smthvar is missing; The default is N; 
+        method   = ML/REML -- Method to be used to fit the model; Default
+                   is REML; ML is only effective if smthvar is missing;
+        random   = random effects covariates (Z); The random effects
+                   covariance matrix is assumed to be unstructured; 
+                    /s -- print the solution;
+        process  = name of the process: 
+                   AR   --- AR(1); 
+                   OU   --- Ornstein-Uhlenbeck process,
+                   NOU1 --- Nonhomogeneous OU process with log-variance 
+                            function: log(v(t)) = a0 + a*g(t), where 
+                            g(t) is specified in gt,
+                   NOU2 --- Nonhomogeneous OU process with log-variance 
+                            function: log(v(t)) = a0 + a1*exp(alpha*t),
+                   NOU3 --- Nonhomogeneous OU process with log-variance 
+                            function: log(v(t)) = a0 + a1*t + a2*t^2,
+                   NOU4 --- Nonhomogeneous OU process with log-variance 
+                            function: log(v(t)) = a0 + a1*g1(t) + a2*g2(t),
+                   NOU5 --- Nonhomogeneous OU process with variance 
+                            function: v(t) = a0 + a1*t + a2*t^2,
+                   NOU6 --- Nonhomogeneous OU process with variance 
+                            function: v(t) = a0 + a1*g(t),
+                   NOU7 --- Nonhomogeneous OU process with variance 
+                            function: v(t) = a0 + a1*g1(t) + a2*g2(t), 
+                            where g1(t), g2(t) must be two pieces of curves,
+                   IOU  --- Integrated OU process,
+                   W    --- Wiener process (Brownian motion),
+                   IW   --- Integrated Wiener process;
+
+        time     = time variable representing the order of obs; not 
+                   required for AR, but the data should be sorted by time;
+                   TIME MUST BE NONNEGATIVE IF precess = IOU, W OR IW;
+  
+        gt       = g(t), the function in NOU1, defined by users. The default
+                   is g(t) = t;  
+        g1t      = g1(t) in NOU4 and NOU7;
+        g2t      = g2(t) in NOU4 and NOU7;
+        id       = identification variable for subjects; if missing, then the 
+                   data are assumed to be independent;
+        msrerr   = whether or not include measurement error (Y/N);
+        maxiter  = maximum number of iterations (maximum=50);
+        conv     = convergence criterion using relative difference of the
+                   likelihood;
+        print    = flag requesting output for model fitting information and
+                   variance components be printed (Y/N);
+        outbeta  = output data set storing the estimates of beta;
+        outbstd  = output data set of std of beta; 
+        outvar   = output data set for smoothing parameter and
+                   variance components;
+        outvstd  = output data set for std of variance components;
+        outran_F = output data set storing the estimates of random effects
+                   and their frequentist variance;
+        outran_B = output data set storing the estimates of random effects
+                   and their Bayesian variance;
+         
+        outprs   = output data set storing the estimated Gaussian process;
+        outsmth  = output data set storing the est of f(.) in 203 equally
+                   spaced points, with two more boundary points added;
+        outband  = output data set storing the est std and band for f(.) 
+                   at the knots.
+        outscore = output data set storing the score test related info. 
+        symsize  = size of symbolspace.
+        worksize = size of workspace.
+  
+
+
+
+  Examples: 
+
+    Here we used the progesterone data used in the paper cited in
+  the Reference and fitted different models. All the models had random
+  intercept, Gaussian stochastic process and measurement error. The
+  differeces were the choice of the process. 
+
+    There are usually three pages of output. The first page is about the model
+  fitting information; the second page is about the variance components; the 
+  third page is about linear fixed effects. Here we only gave all output for 
+  AR(1) process, and gave only second page putput for other process.
+
+    The estimated nonparametric function should be output using outsmth= and 
+  its bands as well as SEs should be output using outband=. They can be plotted
+  using S-plus or Proc GPLOT in SAS.  
+
+    When there are continuous fixed effects covariates, for computational 
+  stability, it is recomemded that these covariates be centered. 
+
+
+
+  1. AR(1) process.
+
+
+    a. program:
+
+       %include 'spmm.mac';
+
+       %spmm(data=control, dep=logpdg, smthvar=day, fixed= age bmi / s,
+             random=int, process=ar, msrerr = y,
+             time=, id=bmid, lintest=y);
+
+
+
+    b. output:
+
+
+                             The SAS System                            1
+                                          10:45 Friday, October 25, 1996
+
+              Macro: SPMM -- Semi-Parametric Mixed Models
+
+
+                           Iteration History
+
+
+                       ITERNUM  LIKELIHD  OBJECTIV
+                             0 -643.1215         .
+                             1 -425.5509 0.5112682
+                             2 -425.0478 0.0011835
+                             3 -425.0461 4.0446E-6
+
+
+                  Model Fitting Information for logpdg
+
+
+                    DESCRIPT                   VALUE
+
+                    REML Log Likelihood    -425.0461
+                    Number of Subjects            34
+                    Number of Observations       492
+                    Number of Knots               98
+
+
+
+                  Covariance Matrix for Random Effects
+
+
+                             D         INT     
+    
+
+
+                             INT 0.1155396
+
+
+               Score test of linearity for covariate day
+
+
+              VERSION              CHISQ        DF P_VALUE
+              Bias-uncorrected 18.371578 1.6222555  0.0001
+              Bias-corrected   19.208323 1.6185349  0.0000
+
+
+
+ 
+ 
+ 
+ 
+         SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+                         Gaussian process=AR(1)
+
+
+
+
+                             The SAS System                            2
+                  Estimates of the variance components
+                                          10:45 Friday, October 25, 1996
+
+         COV_PARM    ESTIMATE         SE      CHISQ    P_VALUE
+
+         SMOOTH       8.0202      4.7525     2.8480    0.0915 
+         D(1,1)       0.1155      0.0843     1.8769    0.1707 
+         AR           0.7680      0.0866    78.6704    0.0000 
+         Diag         0.3408      0.0730    21.8100    0.0000 
+         Residual     0.1145      0.0279    16.8717    0.0000 
+ 
+ 
+
+
+
+
+
+
+
+ 
+         SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+                         Gaussian process=AR(1)
+
+
+
+
+
+
+
+                             The SAS System                            3
+                     Estimates of the fixed effects
+                                          10:45 Friday, October 25, 1996
+
+  XNAMES     BETA     F_SE  F_CHISQ     F_P     B_SE  B_CHISQ     B_P
+
+   AGE     1.8464   1.8016   1.0504  0.3054   1.8017   1.0503  0.3054
+   BMI    -2.1479   2.1962   0.9565  0.3281   2.1964   0.9563  0.3281
+
+
+
+    c. interpretaion of the output:
+
+       The first page of the putput is about the iteration history and the model 
+     fitting information, where the REML Log Likelihood is the REML log 
+     likelihood of the smoothing parameter and variance components, as well as 
+     the linearity test, if requested.
+
+
+       The second page is the estimates of 1/(smoothing parameter), called
+     SMOOTH, and the parameters in the random effects, stochastic process and
+     measurement error. The following is the meaning of the parameters: 
+
+ 
+       SMOOTH   --- estimate of one over smoothing parameter
+       D(1,1)   --- the (1,1)th element of D matrix of random effects
+       AR       --- the correlation between two observations in AR(1) process
+       Diag     --- marginal variance of the AR(1) process
+       Residual --- the variance of the measurement error
+
+    
+       The third page contains the information about estimation and inference
+     about beta in the linear fixed effects.  F_SE,  F_CHISQ, F_P are the
+     standard error, chi-square, p-value from Frequentist inference, while
+     B_SE, B_CHISQ, B_P are the standard error, chi-square, p-value from
+     Bayesian inference.  
+
+
+       At the end of each page, you can find the information about dependent
+     variable, the variable that needs smoothed, linear fixed effects
+     covariates, random effects covariates, the name of the Gaussian process
+     and the corresponding variance function.     
+
+
+
+
+  2. Ornstein-Uhlenbeck (OU) process
+
+
+    a. program
+
+       %spmm(data=control, dep=logpdg, smthvar=day, fixed= age bmi / s,
+             random=int, process=ou, msrerr = y,
+             time=day, id=bmid);
+
+
+    b. output. (The first page and the third page of the output are similar. We only
+       presented the second page about the variance components information.)
+
+
+
+
+                                                                       5
+                  Estimates of the variance components
+                                          10:45 Friday, October 25, 1996
+
+         COV_PARM    ESTIMATE         SE      CHISQ    P_VALUE
+
+         SMOOTH       8.2500      5.0348     2.6850    0.1013 
+         D(1,1)       0.1714      0.0731     5.4945    0.0191 
+         Rho          0.1427      0.1133     1.5874    0.2077 
+         Diag         0.2662      0.0505    27.7506    0.0000 
+         Residual     0.1267      0.0327    15.0153    0.0001 
+
+
+ 
+         SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+              Gaussian process=Ornstein-Uhlenbeck process
+
+
+ 
+    c. interpretation:
+
+       SMOOTH   --- estimate of one over smoothing parameter
+       D(1,1)   --- the (1,1)th element of D matrix of random effects
+       Rho      --- the rho in cov(U(t), U(s)) = rho^|t-s|
+       Diag     --- marginal variance of the OU process 
+       Residual --- the variance of the measurement error
+
+
+
+
+  3. NOU1: Nonhomogeneous OU process with log-variance function: 
+     log(V(t)) = a0 + a1*g(t)
+
+    a. program:
+
+       %spmm(data=control, dep=logpdg, smthvar=day, fixed= age bmi / s,
+             random=int, process=nou1, msrerr = y,
+             time=day, id=bmid, lintest);
+
+      
+        NOTE: Here gt is missing, so gt=t is assumed.
+
+
+    b. output:
+
+   
+
+                                                                       8
+                  Estimates of the variance components
+                                          10:45 Friday, October 25, 1996
+
+         COV_PARM    ESTIMATE         SE      CHISQ    P_VALUE
+
+         SMOOTH       7.7999      4.7710     2.6728    0.1021 
+         D(1,1)       0.2364      0.0723    10.6849    0.0011 
+         Rho          0.0690      0.0544     1.6086    0.2047 
+         A0          -1.7849      0.2572    48.1735    0.0000 
+         A1           0.9792      0.2497    15.3814    0.0001 
+         Residual     0.1166      0.0264    19.4554    0.0000 
+ 
+ 
+  
+         SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+            Gaussian process=Nonhomogeneous OU process with
+            log-variance function: log(V(t)) = a0 + a1*g(t)
+
+    
+  
+
+    c. interpretation:
+
+       SMOOTH   --- estimate of one over smoothing parameter
+       D(1,1)   --- the (1,1)th element of D matrix of random effects
+       Rho      --- the rho in cov(U(t), U(s)) = rho^|t-s|
+       A0       --- ao in log(V(t)) = a0 + a1*g(t)
+       A1       --- a1 in log(V(t)) = a0 + a1*g(t)  
+       Residual --- the variance of the measurement error
+
+
+
+
+  4. NOU2: Nonhomogeneous OU process with log-variance function:
+            log(V(t)) = a0 + a1*exp(alpha*t)
+
+   
+    a. program:
+  
+
+    %spmm(data=control, dep=logpdg, smthvar=day, fixed= age bmi / s,
+          random=int, process=nou2, msrerr = y,
+          time=day, id=bmid, lintest=y);
+
+ 
+    b. output:
+
+                                                                      11
+                  Estimates of the variance components
+                                          10:45 Friday, October 25, 1996
+
+         COV_PARM    ESTIMATE         SE      CHISQ    P_VALUE
+
+         SMOOTH      22.7023     15.0126     2.2868    0.1305 
+         D(1,1)       0.0000      0.9805     0.0000    1.0000 
+         Rho          0.7942      0.0523    230.742    0.0000 
+         Alpha       -1.1543      0.2761    17.4776    0.0000 
+         A0           0.8766      0.4835     3.2876    0.0698 
+         A1           0.7076      0.3243     4.7623    0.0291 
+         Residual     0.6047      0.0799    57.3022    0.0000 
+
+
+
+ 
+         SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+            Gaussian process=Nonhomogeneous OU process with
+        log-variance function: log(V(t)) = a0 + a1*exp(alpha*t)
+
+
+    c. interpretation:
+
+       SMOOTH   --- estimate of one over smoothing parameter
+       D(1,1)   --- the (1,1)th element of D matrix of random effects     
+       Rho      --- the rho in cov(U(t), U(s)) = rho^|t-s|     
+       Alpha    --- the alpha in log(V(t)) = a0 + a1*exp(alpha*t)
+       A0       --- the a0 in log(V(t)) = a0 + a1*exp(alpha*t)
+       A1       --- the A1 in log(V(t)) = a0 + a1*exp(alpha*t)
+       Residual --- the variance of the measurement error
+
+
+
+  
+  5. NOU3: Nonhomogeneous OU process with log-variance function:
+     log(V(t)) =  a0 + a1*t + a2*t^2
+
+    a. program:
+       
+       %spmm(data=control, dep=logpdg, smthvar=day, fixed= age bmi / s,
+             random=int, process=nou3, msrerr = y,
+             time=day, id=bmid, lintest=y);
+
+
+    b. output:
+  
+                  Estimates of the variance components
+                                          10:45 Friday, October 25, 1996
+
+         COV_PARM    ESTIMATE         SE      CHISQ    P_VALUE
+
+         SMOOTH       7.3159      4.5124     2.6286    0.1050 
+         D(1,1)       0.2598      0.0719    13.0513    0.0003 
+         Rho          0.0968      0.0613     2.4955    0.1142 
+         A0          -2.1034      0.4206    25.0069    0.0000 
+         A1           3.5210      1.1524     9.3351    0.0022 
+         A2          -2.0745      0.7708     7.2433    0.0071 
+         Residual     0.1360      0.0166    67.4678    0.0000 
+ 
+ 
+
+ 
+         SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+            Gaussian process=Nonhomogeneous OU process with
+         log-variance function: log(V(t)) =  a0 + a1*t + a2*t^2
+
+ 
+    c. interpretation:
+
+       SMOOTH   --- estimate of one over smoothing parameter
+       D(1,1)   --- the (1,1)th element of D matrix of random effects     
+       Rho      --- the rho in cov(U(t), U(s)) = rho^|t-s|     
+       A0       --- the a0 in log(V(t)) =  a0 + a1*t + a2*t^2
+       A1       --- the a1 in log(V(t)) =  a0 + a1*t + a2*t^2
+       A2       --- the a2 in log(V(t)) =  a0 + a1*t + a2*t^2
+       Residual --- the variance of the measurement error
+
+
+
+
+  6. IOU: Integrated OU process
+
+    a. program:
+
+       %spmm(data=control, dep=logpdg, smthvar=day, fixed= age bmi / s,
+             random=int, process=iou, msrerr = y,
+             time=day, id=bmid, lintest=y);
+        
+        NOTE: the variable in time= should be nonnegative
+
+
+    b. output:
+
+                                                                      17
+                  Estimates of the variance components
+                                          10:45 Friday, October 25, 1996
+
+         COV_PARM    ESTIMATE         SE      CHISQ    P_VALUE
+
+         SMOOTH       9.0315      5.3381     2.8625    0.0907 
+         D(1,1)       0.0917      0.0967     0.8990    0.3430 
+         Alpha       26.9190     133.544     0.0406    0.8402 
+         Sigma^2      6.1340     30.1805     0.0413    0.8389 
+         Residual     0.1652      0.0712     5.3788    0.0204 
+ 
+ 
+ 
+          SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+                 Gaussian process=Integrated OU process
+      
+        
+      
+       
+
+    c. interpretation:
+
+       SMOOTH   --- estimate of one over smoothing parameter
+       D(1,1)   --- the (1,1)th element of D matrix of random effects 
+       Alpha    --- -log(rho), where rho is the rho in the OU process
+       Sigma^2  --- the variance of the OU process
+       Residual --- the variance of the measurement error
+
+
+   
+
+  7. W: Wiener process (Brownian motion)
+
+    a. program:
+
+    %spmm(data=control, dep=logpdg, smthvar=day, fixed= age bmi / s,
+          random=int, process=w, msrerr = y,
+          time=day, id=bmid, lintest=y);
+
+    NOTE: the variable in time= should be nonnegative
+
+
+    b. output:
+
+                                                                      20
+                  Estimates of the variance components
+                                          10:45 Friday, October 25, 1996
+
+         COV_PARM    ESTIMATE         SE      CHISQ    P_VALUE
+
+         SMOOTH       8.7015      5.2265     2.7719    0.0959 
+         D(1,1)       0.1165      0.0755     2.3780    0.1231 
+         Sigma^2      0.4334      0.0825    27.5880    0.0000 
+         Residual     0.1735      0.0179    93.4297    0.0000 
+ 
+ 
+
+
+ 
+         SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+           Gaussian process=Wiener process (Brownian motion)
+                                                              
+
+    c. interpretation:
+
+       SMOOTH   --- estimate of one over smoothing parameter
+       D(1,1)   --- the (1,1)th element of D matrix of random effects 
+       Sigma^2  --- multiple of the Brownian motion  
+       Residual --- the variance of the measurement error
+
+
+
+
+  8. IW: Integrated Wiener process                
+
+    a. program:
+
+    %spmm(data=control, dep=logpdg, smthvar=day, fixed= age bmi / s,
+          random=int, process=iw, msrerr = y,
+          time=day, id=bmid);
+
+    NOTE: the variable in time= should be nonnegative
+
+
+    b. output:
+
+                                                                      23
+                  Estimates of the variance components
+                                          10:45 Friday, October 25, 1996
+
+         COV_PARM    ESTIMATE         SE      CHISQ    P_VALUE
+
+         SMOOTH       8.8050      5.4335     2.6260    0.1051 
+         D(1,1)       0.2806      0.0844    11.0554    0.0009 
+         Sigma^2      0.0939      0.0295    10.1456    0.0014 
+         Residual     0.2755      0.0194    202.667    0.0000 
+ 
+      
+
+
+      SPMM Macro: dep=logpdg, id=bmid, smoothed variable=day
+                         fixed effects=age bmi
+                           random effects=int
+               Gaussian process=Integrated Wiener process                
+
+
+
+
+    c. interpretation:
+      
+       SMOOTH   --- estimate of one over smoothing parameter
+       D(1,1)   --- the (1,1)th element of D matrix of random effects        
+       Sigma^2  --- Sigma^2 the Wiener process        
+       Residual --- the variance of the measurement error
+
+
+
+
+
+  Reference: 
+
+    Zhang, D., Lin, X., Raz, J. and M.F. Sowers, (1998), Semiparametric
+  Stochastic Mixed Models for Longitudinal Data, JASA, 93, 710-719.
+
+  CAUTION: 
+
+    All effects should be defined except the fixed effect of intercept. 
+
+    There must be at least 3 distinct tij's in order to fit f(.).
+  Otherwise the program would crash.
+
+
+  Problems --- Report problems to Daowen Zhang at dzhang@umich.edu

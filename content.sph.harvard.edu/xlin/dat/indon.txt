@@ -1,0 +1,14 @@
+ID
+respiratory infection
+intercept
+age in months (minus 36 months)
+xerophthalmia
+cos(visit)
+sin(visit)
+sex
+height for age
+stunted?
+visit
+baseline age
+season (1=Spring, ..., 4=Winter)
+visit*visit

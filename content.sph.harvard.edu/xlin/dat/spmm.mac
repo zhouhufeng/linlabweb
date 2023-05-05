@@ -1,0 +1,4321 @@
+/* 
+********************************************************************;
+
+                          Macro name: %spmm
+
+
+              ~~~~~~~~ SEMI-PARAMETRIC MIXED MODELS ~~~~~~~~
+
+
+                             Version 1.0
+
+
+                              Function: 
+
+    This macro fits the following model to longitudinal Gaussian data:
+
+         Yij = Xij*beta + f(tij) + Zij*bi + Ui(tij) + esp(ij),
+
+  where beta is parametric fixed effects, f(.) is a smooth function, bi
+  is random effects, Ui(.) is a Gaussian process, esp(ij) is the
+  measurement error. Maximum penalized likelihood was used to estimate
+  the beta and f(.), while smoohting parameter and the parameters in the
+  variance matrix are estimated by REML method, which treats f(.) as an
+  integrated Wiener process. 
+
+
+
+                          Macro developer: 
+
+                            Daowen Zhang
+                     Department of Biostatistics
+                     The University of Michigan
+                        Ann Arbor, MI 48109
+                      E-mail: dzhang@umich.edu
+
+
+                         (C) Daowen Zhang
+ 
+                        Date: April 17, 1996
+
+
+  Call statement:
+                                           Default
+  %spmm(data=,
+        dep=,
+        fixed=,
+        smthvar=,
+        smooth=,
+        method=,
+        lintest=,
+        random=,
+        process=,
+        time=,
+        gt=,
+        g1t=,
+        g2t=,
+        id=,
+        msrerr=,                           {Y}
+        maxiter=,                          {50}
+        conv=,                             {0.00001}
+        print=                             {Y}
+        outbeta= 
+        outbstd=  
+        outvar=
+        outvstd=
+        outran_F=
+        outran_B=   
+        outprs=                                                
+        outsmth=  
+        outband= 
+        outscore=
+        symsize=                           {1022976} 
+        worksize=                          {1022976})
+
+  where 
+        data     = name of the data set to be used;
+        dep      = dependent variable (Y);
+        fixed    = fixed effects covariates (X);  /s -- print the solution;
+        smthvar  = covariate that needs smoothed (t); if missing, a linear mixed
+                   model is fitted.
+        smooth   = 1/smoothing parameter, can be missing;
+        lintest  = Y/N -- request the performance of linearity test based on
+                   the score test statistics for f(t) or the first covariate
+                   in X if smthvar is missing; The default is N; 
+        method   = ML/REML -- Method to be used to fit the model; Default
+                   is REML; ML is only effective if smthvar is missing;
+        random   = random effects covariates (Z); The random effects
+                   covariance matrix is assumed to be unstructured;  
+                   /s -- print the solution;
+        process  = name of the process: 
+                   AR   --- AR(1); 
+                   OU   --- Ornstein-Uhlenbeck process,
+                   NOU1 --- Nonhomogeneous OU process with log-variance 
+                            function: log(v(t)) = a0 + a1*g(t), where g(t) is
+                            specified in gt,
+                   NOU2 --- Nonhomogeneous OU process with log-variance 
+                            function: log(v(t)) = a0 + a1*exp(alpha*t),
+                   NOU3 --- Nonhomogeneous OU process with log-variance 
+                            function: log(v(t)) = a0 + a1*t + a2*t^2,
+                   NOU4 --- Nonhomogeneous OU process with log-variance 
+                            function: log(v(t)) = a0 + a1*g1(t) + a2*g2(t),
+                   NOU5 --- Nonhomogeneous OU process with variance 
+                            function: v(t) = a0 + a1*t + a2*t^2,
+                   NOU6 --- Nonhomogeneous OU process with variance 
+                            function: v(t) = a0 + a1*g(t),
+                   NOU7 --- Nonhomogeneous OU process with variance 
+                            function: v(t) = a0 + a1*g1(t) + a2*g2(t), where
+                            g1(t), g2(t) must be two pieces of curves,
+                   IOU  --- Integrated OU process,
+                   W    --- Wiener process (Brownian motion),
+                   IW   --- Integrated Wiener process;
+
+        time     = time variable representing the order of obs; not 
+                   required for AR, but the data should be sorted by time; 
+        gt       = g(t), the function in NOU1, defined by users. The default
+                   is g(t) = t;  
+        g1t      = g1(t) in NOU4 and NOU7;
+        g2t      = g2(t) in NOU4 and NOU7;
+        id       = identification variable for subjects; if missing, then the 
+                   data are assumed to be independent;
+        msrerr   = whether or not include measurement error (Y/N);
+        maxiter  = maximum number of iterations (maximum=50);
+        conv     = convergence criterion using relative difference of the
+                   likelihood;
+        print    = flag requesting output for model fitting information and
+                   variance components be printed (Y/N);
+        outbeta  = output data set storing the estimates of beta;
+        outbstd  = output data set of std of beta; 
+        outvar   = output data set for smoothing parameter and
+                   variance components;
+        outvstd  = output data set for std of variance components;
+        outran_F = output data set storing the estimates of random effects
+                   and their frequentist variance;
+        outran_B = output data set storing the estimates of random effects
+                   and their Bayesian variance;
+         
+        outprs   = output data set storing the estimated Gaussian process;
+        outsmth  = output data set storing the est of f(.) in 203 equally
+                   spaced points, with two more boundary points added;
+        outband  = output data set storing the est std and band for f(.) 
+                   at the knots.
+        outscore = output data set storing the score test related info. 
+        symsize  = size of symbolspace.
+        worksize = size of workspace.
+  
+
+  Example:
+
+    provided later.
+
+
+  Reference: 
+
+    provided later.
+
+  CAUTION: 
+
+    There must be at least 3 distinct tij's in order to fit f(.).
+  Otherwise the program would crash.
+
+*********************************************************************
+*/
+ 
+
+%macro spmm(data=, dep=, fixed=, smthvar=, smooth=, lintest=N, 
+            method=REML, random=, process=, time=, gt=, g1t=, g2t=, id=,
+            msrerr=Y, maxiter=50, conv=0.00001, parm=, print=Y,
+            outbeta=, outbstd=, outvar=, outvstd=, outran_F=, outran_B=,
+            outprs=, outsmth=, outband=, outscore=, 
+            symsize=1022976, worksize=1022976); 
+
+
+options ls=72 ps=60 replace;
+
+/* Covert some key words to upper cases */ 
+%let smth=0;
+%if %length(&smthvar)>0 %then
+  %let smth=1;
+
+%let lam=0;
+%if %length(&smooth)>0 %then
+  %let lam=1;
+
+%let lintest = %upcase(&lintest);
+%let method = %upcase(&method);
+%if &method^=ML and &method^=REML %then
+  %let method=REML; 
+
+%let msrerr = %upcase(&msrerr);
+%let process = %upcase(&process);
+%let print = %upcase(&print);
+
+
+/* Count the number of fixed effects: Max = 50 */
+%let xvars=%scan(&fixed, 1, /);
+%let prnfix = %upcase(%scan(&fixed, 2, /));  
+%let nxs=0;
+%do i=1 %to 50;
+  %if %scan(&xvars, &i)= %then %goto done1;
+  %let nxs=%eval(&nxs+1);
+%end;
+%done1: ;
+
+
+/* Count the number of random effects: Max = 50, and get random effects */
+%let zvars = %scan(&random, 1, /);
+%let prnran = %upcase(%scan(&random, 2, /));
+%let nzs=0;
+%do i=1 %to 50;
+  %if %scan(&zvars, &i)= %then %goto done2;
+  %let nzs=%eval(&nzs+1);
+%end;
+%done2: ;
+%let q = %eval((&nzs)*(&nzs+1)/2);  /*  q = number of par for random eff */
+
+%if &smth=1 and &lam=0 %then 
+  %let q = %eval(&q + 1);           /* including smthing parm            */
+
+%let dim = &q;
+
+
+%let prs=0;                         /* prs = # of pars in the process */
+%let type=0;
+%if %length(&process)>0 %then %do;
+  %if &process=AR %then %do;
+    %let prs=2;
+    %let type=1;
+    %let dim=%eval(&dim+2);
+  %end;
+  %else %if &process=OU %then %do;
+    %let prs=2;
+    %let type=2;
+    %let dim=%eval(&dim+2);
+  %end;
+  %else %if &process=NOU1 %then %do;
+    %let prs=3;
+    %let type=3;
+    %let dim=%eval(&dim+3);
+  %end;
+  %else %if &process=NOU2 %then %do;
+    %let prs=4;
+    %let type=4;
+    %let dim=%eval(&dim+4);
+  %end;
+  %else %if &process=NOU3 %then %do;
+    %let prs=4;
+    %let type=5;
+    %let dim=%eval(&dim+4);
+  %end;
+  %else %if &process=IOU %then %do;
+    %let prs=2;
+    %let type=6;
+    %let dim=%eval(&dim+2);
+  %end; 
+  %else %if &process=W %then %do;
+    %let prs=1;
+    %let type=7;
+    %let dim=%eval(&dim+1);
+  %end; 
+  %else %if &process=IW %then %do;
+    %let prs=1;
+    %let type=8;
+    %let dim=%eval(&dim+1);
+  %end; 
+  %else %if &process=NOU4 %then %do;
+    %let prs=4;
+    %let type=9;
+    %let dim=%eval(&dim+4);
+  %end;  
+  %else %if &process=NOU5 %then %do;
+    %let prs=4;
+    %let type=10;
+    %let dim=%eval(&dim+4);
+  %end;  
+  %else %if &process=NOU6 %then %do;
+    %let prs=3;
+    %let type=11;
+    %let dim=%eval(&dim+3);
+  %end;  
+  %else %if &process=NOU7 %then %do;
+    %let prs=4;
+    %let type=12;
+    %let dim=%eval(&dim+4);
+  %end;
+%end;
+
+%let msr=0;
+%if &msrerr=Y %then %do;
+  %let dim=%eval(&dim+1);
+  %let msr=1;
+%end;
+
+%let q1=%eval(&q + 1);
+%let q2=%eval(&q + &prs);
+
+
+/* Count the number of values in parm  */
+%let nps=0;
+%do i=1 %to 50;
+  %if %qscan(&parm, &i, %str( ))= %then %goto done3;
+  %let nps=%eval(&nps+1);
+%end;
+%done3: ;  
+
+%if &maxiter>50 %then
+  %let maxiter=50;
+
+
+footnote"SPMM Macro: dep=&dep, id=&id, smoothed variable=&smthvar";
+
+/* Give a footnote to the fixed effects */
+%let maxvar=8;
+
+%let xvar=;
+%let control=&maxvar;
+%if &control > &nxs %then 
+  %let control=&nxs;
+%do i=1 %to &control; 
+  %let _x=%scan(&xvars, &i);
+  %let xvar=&xvar &_x; 
+%end;
+footnote2"fixed effects=&xvar";
+
+%let restvar=%eval(&nxs - &maxvar);
+%let iternum=1;
+
+%start: %if &restvar > 0 %then %do;
+  %let xvar=%str();
+  %let control=%eval((&iternum+1)*&maxvar);
+  %if &control > &nxs %then 
+  %let control=&nxs;
+  %do i=%eval(1+&iternum*&maxvar) %to &control; 
+    %let _x=%scan(&xvars, &i);
+    %let xvar=&xvar &_x; 
+  %end;
+
+  %let iternum=%eval(&iternum + 1);
+  %let notenum=%eval(&iternum + 1);
+  footnote&notenum"+&xvar";
+  %let restvar = %eval(&restvar - &maxvar);
+  %goto start;
+%end;
+
+/* Give a footnote to the random effects */
+%let notenum=%eval(&iternum + 2);
+footnote&notenum"random effects=&zvars";
+
+/* Give a footnote to the Gaussian process */
+%let notenum=%eval(&notenum+1);
+%let notenum2=%eval(&notenum+1);
+%if &prs=0 %then %do;
+  footnote&notenum"Gaussian process=";
+%end;
+%else %if &type=1 %then %do;
+  footnote&notenum"Gaussian process=AR(1)";
+%end;
+%else %if &type=2 %then %do;
+  footnote&notenum"Gaussian process=Ornstein-Uhlenbeck process";
+%end;
+%else %if &type=3 %then %do;
+  footnote&notenum"Gaussian process=Nonhomogeneous OU process with";
+  footnote&notenum2"log-variance function: log(V(t)) = a0 + a1*g(t)";
+%end;
+%else %if &type=4 %then %do;
+  footnote&notenum"Gaussian process=Nonhomogeneous OU process with";
+  footnote&notenum2"log-variance function: log(V(t)) = a0 + a1*exp(alpha*t)";
+%end;
+%else %if &type=5 %then %do;
+  footnote&notenum"Gaussian process=Nonhomogeneous OU process with";
+  footnote&notenum2"log-variance function: log(V(t)) =  a0 + a1*t + a2*t^2";
+%end;
+%else %if &type=6 %then %do;
+  footnote&notenum"Gaussian process=Integrated OU process";
+%end;
+%else %if &type=7 %then %do;
+  footnote&notenum"Gaussian process=Wiener process (Brownian motion)";
+%end;
+%else %if &type=8 %then %do;
+  footnote&notenum"Gaussian process=Integrated Wiener process";
+%end;
+%else %if &type=9 %then %do;
+  footnote&notenum"Gaussian process=Nonhomogeneous OU process with";
+  footnote&notenum2"log-variance function: log(V(t)) = a0 + a1*g1(t) + a2*g2(t)";
+%end;
+%else %if &type=10 %then %do;
+  footnote&notenum"Gaussian process=Nonhomogeneous OU process with";
+  footnote&notenum2"variance function: V(t) = a0 + a1*t + a2*t^2";
+%end;
+%else %if &type=11 %then %do;
+  footnote&notenum"Gaussian process=Nonhomogeneous OU process with variance";
+  footnote&notenum2"variance function: V(t) = a0 + a1*g(t)";
+%end;
+%else %if &type=12 %then %do;
+  footnote&notenum"Gaussian process=Nonhomogeneous OU process with variance";
+  footnote&notenum2"variance function: V(t) = a0 + a1*g1(t) + a2*g2(t)";
+%end;
+
+
+%* Delete obs with missing values;
+data _setup; set &data;
+  %if %length(&id)=0 %then %str(_id = _n_;);
+   
+  keep %if %length(&id)=0 %then %str(_id);
+    &id &dep &xvars &smthvar &zvars
+    %if &type>1 %then %do;
+       %if %upcase(&smthvar) ^= %upcase(&time) %then
+         %str(&time);
+
+       %if &type=9 or &type=12 %then
+         %str(&g1t &g2t);
+      
+       %if %length(&gt)>0 %then %do;
+          %if (&type=3 or &type=11) and %upcase(&gt) ^= %upcase(&time) %then 
+             %str(&gt);
+       %end;
+     %end;
+     %str(;);
+  zmiss=0;
+  %if &smth=1 %then %do;
+    zz=&smthvar;
+    if zz=. then zmiss=1;
+  %end;
+  %do i=1 %to &nxs;
+    zz=%scan(&xvars, &i);
+    if zz=. then zmiss=1;
+  %end;
+  %do i=1 %to &nzs;
+    zz=%scan(&zvars, &i);
+    if zz=. then zmiss=1;
+  %end;  
+  if &dep=. or zmiss=1 then delete;
+run;
+
+  /* Get the distinct knots */
+
+%if &smth=1 or &lintest=Y %then %do; 
+
+  %if &smth=0 and &nxs>0 %then
+    %let smthvar = %scan(&xvars, 1);
+
+  data _knots; set _setup;
+    keep &smthvar;
+  run;
+
+  proc sort data=_knots;
+    by &smthvar;
+  run;
+
+  data _knots; set _knots;
+    by &smthvar;
+    if first.&smthvar=1;  
+    _knot=&smthvar;
+    keep _knot; 
+  run;
+
+%end;
+
+/* Get the number of observations for each subject */
+ 
+proc sort data = _setup; 
+  %if %length(&id)=0 %then
+    %str(by _id;);
+  %else 
+    %str(by &id;);
+run;
+
+proc means n noprint data=_setup;
+  %if %length(&id)=0 %then
+    %str(by _id;);
+  %else 
+    %str(by &id;);
+ 
+  var &dep;
+  output out=_nobs n=&dep;
+run;
+
+data _nobs; set _nobs;
+  _n=&dep;
+  keep %if %length(&id)=0 %then %str(_id);
+       %else %str(&id); _n;
+
+run; 
+
+data _subject; set _nobs;
+  keep %if %length(&id)=0 %then %str(_id;); %else %str(&id;);
+run;
+
+proc means n data=_subject noprint;
+  var %if %length(&id)=0 %then %str(_id;); %else %str(&id;);
+  output out=_subject n=%if %length(&id)=0 %then %str(_id;); %else %str(&id;);
+run;
+
+data _null_; set _subject;
+  call symput('m', %if %length(&id)=0 %then %str(_id); %else %str(&id););
+run;  
+
+
+
+proc iml symsize=&symsize worksize=&worksize;
+
+%if &smth=1 or &lintest=Y %then %do;
+
+  /* Create matrices Q R defined in Green's book */ 
+  use _knots; setin _knots;
+  read all var{_knot}; 
+  numknot = nrow(_knot);                       /* # of distinct knots */
+  T = j(numknot, 1, 1) || _knot;
+
+  r = numknot - 2;                             /* Rank of R defined later */
+  h = _knot[2:numknot] - _knot[1:numknot-1];
+
+  /* q1 q2 q3 are three diagonal vectors of Q */
+  q1 = 1/h[1:r];
+  q3 = 1/h[2:r+1];
+  q2 = -(q1+q3);
+
+  /* dr is the main diag, lr is the adjacent diag of R */
+  dr = (h[1:r] + h[2:r+1])/3;
+  if r>1 then
+    lr = h[2:r]/6;
+
+  /*    Cholesky decomposition of R=LDL^T   */
+  /* dr became the diag of D,  lr became off diag of L */
+  if r > 1 then do;
+    do i=2 to r;
+      lr[i-1] = lr[i-1]/dr[i-1];
+      dr[i] = dr[i] - lr[i-1]**2*dr[i-1];
+    end;
+  end;
+
+  Q = j(numknot, r, 0);
+
+  do i=1 to r;
+    Q[i,i] = 1/h[i];
+    Q[i+2, i] = 1/h[i+1];
+    Q[i+1,i] = -(Q[i,i] + Q[i+2, i]);
+  end;
+
+  B = Q * inv(Q`*Q);
+
+  temp = j(r,r,0);
+
+  do i=1 to r;
+    temp[i,i] = 1;
+  end;
+
+  do i=1 to r-1;
+    temp[i+1, i] = lr[i];
+  end;
+
+  B = B * temp * diag(sqrt(dr));
+
+  free Q;
+%end;
+ 
+  use _setup; setin _setup;
+  %if &smth=1 or &lintest=Y %then %do;
+    read all var{&smthvar} into smthvar;
+  %end;
+  read all var{&dep} into Y; 
+  
+  %if &nxs>0 %then %do;
+    read all var{&xvars} into X;
+  %end;
+
+  %if &nzs>0 %then %do;
+    read all var{&zvars} into Z; 
+  %end;  
+
+  %if &prs>0 %then %do;
+    %if &type>1 %then %do; 
+      read all var{&time} into time; 
+      %if &type=10 %then %do;
+        mint=min(time);
+        maxt=max(time);
+      %end;
+      %if (&type=3 or &type=11) and %length(&gt)>0 and 
+        %upcase(&gt) ^= %upcase(&time) %then %do;
+        read all var{&gt} into gt;
+      %end;
+      %if &type=9 or &type=12 %then %do;
+        read all var{&g1t} into g1t;
+        read all var{&g2t} into g2t;
+      %end;
+    %end;   
+  %end;
+
+  %if %length(&outprs)>0 %then %do; 
+    %if %length(&id)=0 %then %do;
+      read all var{_id} into _id;
+    %end;
+    %else %do;
+      read all var{&id} into _id;
+    %end;
+  %end;
+
+  n = nrow(Y);       /* n is the total number of observations */
+
+  use _nobs; setin _nobs;
+  read all var{_n};    /* _n contains the number of obs for subject */
+
+  %if %length(&outran_F)>0 or %length(&outran_B)>0 or &prnran=S %then %do;
+    %if %length(&id)=0 %then %do;
+      read all var{_id} into id;
+    %end;
+    %else %do;
+      read all var{&id} into id;
+    %end;    
+  %end;
+
+  m=&m;
+
+  m1 = j(m,1,1);        /* m1 is the starting point of cumulant number of obs */
+  m2 = m1;              /* m2 is the end point of cumulant number of obs */
+  m2[1] = _n[1];
+  do i=2 to m;
+    m1[i] = m2[i-1] + 1;
+    m2[i] = m2[i-1] + _n[i];
+  end;
+
+  vstart = j(m, 1, 1);
+  vend = vstart;
+  vend[1] = _n[1]*(_n[1] + 1)/2;
+  do i=2 to m;
+    vstart[i] = vend[i-1] + 1;
+    vend[i] = vend[i-1] + _n[i]*(_n[i] + 1)/2;
+  end;
+
+  WM = j(vend[m], 1, 0);  /* store W in a vector */ 
+
+  /*  get incidence vector called order  */
+
+%if &smth=1 or &lintest=Y %then %do;
+  order = smthvar;
+  do i = 1 to m;
+    smthi = smthvar[m1[i]: m2[i]];
+    orderi = smthi;
+    do j=1 to _n[i];
+      k=1;
+      find=0;
+      do while (find=0);
+        if smthi[j] = _knot[k] then do;
+          orderi[j]=k;
+          find=1;
+        end;
+        else;
+          k = k+1;
+      end;
+    end;
+    order[m1[i]: m2[i]] = orderi;
+  end;
+%end;
+
+    
+  /*  function to get trace(A*B)   */ 
+
+  start trc(A, B);
+    tr = 0;
+    n = nrow(A);
+    do i=1 to n;
+      tr = tr + A[i,]*B[,i];
+    end;
+    return(tr);
+  finish; 
+
+  /* Function to compare if A=B  */
+ 
+  start equal(A,B);
+    nrowa=nrow(A);
+    ncola=ncol(A);
+    nrowb=nrow(B);
+    ncolb=ncol(B);
+    result=(nrowa=nrowb & ncola=ncolb);
+    if result=1 then do;
+      temp=(A=B);
+      if sum(temp)=nrowa*ncola then
+        result=1;
+      else 
+        result=0;
+    end;
+    return(result);
+  finish; 
+  
+
+  /*  function to form a matrix from a vector */
+
+  start formmat(vec);
+    nvec = nrow(vec);
+    dim = (sqrt(1+8*nvec) - 1)/2;
+    
+    Mat = j(dim, dim, 0);
+    
+    l=1;
+    do i=1 to dim;
+      do j=1 to i;
+        Mat[i,j] = vec[l];
+        l=l+1;
+      end;
+    end;
+
+    do i=2 to dim;
+      do j=1 to i-1;
+        Mat[j,i] = Mat[i,j];
+      end;
+    end;
+
+    return(Mat);
+  finish;  
+
+ /*  function to form a vector from a matrix */
+
+  start formvec(Mat);
+    dim = nrow(Mat);
+    nvec = dim*(dim+1)/2;
+
+    vec = j(nvec, 1, 0);
+
+    l=1;
+    do i=1 to dim;
+      do j=1 to i;
+        vec[l] = Mat[i,j];
+        l = l + 1;
+      end;
+    end;
+
+    return(vec);
+  finish;
+
+  /*  function to get N_{i}B   */
+
+  start NB(i) global(order, m1, m2, _n, r, B, numknot);
+    orderi = order[m1[i]: m2[i]];
+    temp = (1:numknot)`;
+    if equal(orderi, temp) then
+      u = B;
+    else do;
+      u = j(_n[i], r, 0);
+      do j=1 to _n[i];
+        u[j,] = B[orderi[j],];
+      end;
+    end;
+    return(u);
+  finish;
+
+  /*  function to get N`*mat  */
+
+  start NTmat(mat) global(order, numknot, n);
+    u = j(numknot, ncol(mat), 0);
+    do i=1 to n;
+      k = order[i];
+      u[k,] = u[k,] + mat[i,];
+    end;
+    return(u);
+  finish;
+
+  /*  Function to get corresponding row and column  */
+ 
+  start rowcol(j);
+    k=j;
+    l=1;
+        
+    do while (k > 0);
+      k=k-l;
+      l=l+1;
+    end;
+    l=l-1;
+    k=k+l;
+
+    a=j(2,1,0);
+    a[1]=l;
+    a[2]=k;
+    return(a);
+  finish;
+
+  %if &smth=1 %then %do;
+    %if &nxs=0 %then %do; 
+      X = j(n,1,1) || smthvar;
+    %end;
+    %else %do;     
+      X = X || j(n,1,1) || smthvar;                
+    %end;
+  %end;
+  %else %do;
+    X = j(n,1,1) || X;
+  %end;
+ 
+  /*   Initialize the parameters   */ 
+  
+  %if &smth=0 %then %do; 
+    dimb = &nxs+1; 
+  %end;
+  %else %do; 
+    dimb = &nxs+numknot; 
+    np = &nxs + 3;          
+  %end;
+     
+  beta1 = j(dimb, 1, 0);                
+  theta1 = j(&dim, 1, 0);  
+
+
+  /*  Macro AutoInit initializes the theta1 automatically  */
+
+%macro AutoInit;
+
+  l=1;
+  %if &smth=1 and &lam=0 %then %do;
+    theta1[1] = 1;
+    l=2;
+  %end;
+
+  %if &nzs>0 %then %do;                 /* random statement ?   */
+    do i=1 to &nzs;
+      do j=1 to i;
+        if i=j then 
+          theta1[l] = 1;
+        else
+          theta1[l] = -0.5;
+        l = l + 1;
+      end;
+    end;
+  %end;
+
+  %if &prs>0  %then %do;               /*  Any process ?   */
+    if &type<3 then do;        /*  AR + OU   */
+      theta1[l] = 0.8;
+      theta1[l+1] = 1;
+      l = l + 2;
+    end;
+    if &type=3 then do;        /*  NOU1 case   */
+      theta1[l] = 0.8;
+      theta1[l+1] = 0;
+      theta1[l+2] = 0;
+      l = l + 3;
+    end; 
+    if &type=4 then do;        /*  NOU2 case   */
+      theta1[l] = 0.8;
+      theta1[l+1] = -1;
+      theta1[l+2] = 1;
+      theta1[l+3] = 1;
+      l = l + 4;
+    end;
+    if &type=5 then do;        /*  NOU3 case   */
+      theta1[l] = 0.8;
+      theta1[l+1] = 0;
+      theta1[l+2] = 0;
+      theta1[l+3] = 0;
+      l = l + 4;
+    end; 
+    if &type=6 then do;        /*  IOU case   */
+      theta1[&q1]=1;
+      theta1[&q2]=1;
+      l = l + 2;
+    end;
+    if &type=7 then do;        /*  Wiener case */
+      theta1[&q1] = 1;
+      l = l + 1;
+    end;
+    if &type=8 then do;        /*  IW case     */
+      theta1[&q1] = 1;
+      l = l + 1;
+    end;
+    if &type=9 then do;        /*  NOU4 case   */
+      theta1[l] = 0.8;
+      theta1[l+1] = 0;
+      theta1[l+2] = 0;
+      theta1[l+3] = 0;
+      l = l + 4;
+    end; 
+    if &type=10 then do;        /*  NOU5 case   */
+      theta1[l] = 0.8;
+      theta1[l+1] = 1;
+      theta1[l+2] = 0;
+      theta1[l+3] = 0;
+      l = l + 4;
+    end; 
+    if &type=11 then do;        /*  NOU6 case   */
+      theta1[l] = 0.8;
+      theta1[l+1] = 1;
+      theta1[l+2] = 0;
+      l = l + 3;
+    end; 
+    if &type=12 then do;        /*  NOU7 case   */
+      theta1[l] = 0.8;
+      theta1[l+1] = 1;
+      theta1[l+2] = 0;
+      theta1[l+3] = 0;
+      l = l + 4;
+    end; 
+  %end;
+
+
+  %if &msr>0 %then %do;               /*  Measurement error ?  */  
+    theta1[l] = 1;
+  %end;
+
+%mend AutoInit;
+
+
+            
+  
+  /**********************************************************/
+  /*                                                        */
+  /*     The folowing macros find the derivertive of        */
+  /*   the variance matrices for different processes        */
+  /*                                                        */ 
+  /**********************************************************/ 
+
+%macro arderv;      /* Deriv of var for AR case  */
+
+  V&q1 = j(_n[i], _n[i], 0);      /* d(V)/d(theta(q1))        */
+  V&q2 = j(_n[i], _n[i], 1);      /* d(V)/d(theta(q2))        */
+
+  if _n[i] > 1 then do;
+
+    V&q1[1,2] = theta0[&q2];
+    V&q2[1,2] = theta0[&q1];
+      
+    if _n[i] > 2 then do;
+      do k=3 to _n[i];
+        V&q1[1,k] = V&q1[1,(k-1)] * theta0[&q1] * (k-1)/(k-2);
+        V&q2[1,k] = V&q2[1,(k-1)] * theta0[&q1];  
+      end;
+
+      do k=2 to _n[i];     
+        do j=2 to _n[i]+1-k;
+          V&q1[j, j+k-1] = V&q1[1,k];
+          V&q2[j, j+k-1] = V&q2[1,k];
+        end;
+      end;
+
+      do k=2 to _n[i];
+        do j=1 to _n[i]+1-k;
+          V&q1[j+k-1,j] = V&q1[j, j+k-1];
+          V&q2[j+k-1,j] = V&q2[j, j+k-1];
+        end;
+      end;
+    end;
+
+  end;    
+  
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend arderv;
+
+
+%macro ouderv;     /* Deriv of var for OU case   */
+
+  V&q1 = j(_n[i], _n[i], 0);      /* d(V)/d(theta(q1))        */
+  V&q2 = j(_n[i], _n[i], 1);      /* d(V)/d(theta(q2))        */
+
+  timei=time[m1[i]:m2[i]];
+  logrho=log(theta0[&q1]);
+  ratio=theta0[&q2]/theta0[&q1];
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[k]-timei[j]);
+
+      V&q2[j,k] = exp(dist*logrho);
+      V&q2[k,j] = V&q2[j,k];
+
+      V&q1[j,k] = V&q2[j,k]*dist*ratio;
+      V&q1[k,j] = V&q1[j,k];
+    end;
+  end;     
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend ouderv;
+
+
+%macro nou1derv;      /* Deriv of var mat for NOU1 case  */
+
+  %do j=&q1 %to &q2;
+    V&j = j(_n[i], _n[i], 0);
+  %end;
+
+  timei=time[m1[i]:m2[i]];
+  
+  %if %length(&gt)>0 and %upcase(&gt) ^= %upcase(&time) %then %do;
+    gti=gt[m1[i]:m2[i]];
+  %end;
+  %else %do;
+     gti=timei;
+  %end;
+
+  temp=theta0[&q2]*gti;
+  logrho=log(theta0[&q1]);
+
+  %let ind=%eval(&q1+1);
+
+  do j=1 to _n[i];
+    V&ind[j,j] = exp(theta0[&q1+1]+temp[j]);
+    V&q2[j,j] = V&ind[j,j]*gti[j];
+  end;
+
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[k]-timei[j]);
+      avg=(temp[k]+temp[j])/2;
+
+      V&ind[j,k] = exp(theta0[&q1+1]+avg+dist*logrho);
+      V&ind[k,j] = V&ind[j,k];
+   
+      V&q1[j,k] = V&ind[j,k] * dist / theta0[&q1];
+      V&q1[k,j] = V&q1[j,k];
+
+      V&q2[j,k] = V&ind[j,k] * (gti[k]+gti[j])/2;      
+      V&q2[k,j] = V&q2[j,k];
+    end;
+  end;
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend nou1derv;
+
+
+%macro nou2derv;      /* Deriv of var mat for NOU2 case  */
+
+  %do j=&q1 %to &q2;
+    V&j = j(_n[i], _n[i], 0);
+  %end;
+
+  timei=time[m1[i]:m2[i]];
+  logrho=log(theta0[&q1]);
+
+  %let ind1=%eval(&q1+1);
+  %let ind2=%eval(&q1+2);
+
+  temp=exp(theta0[&ind1]*timei);
+  temp1=theta0[&q2]*temp;
+  temp2=timei#temp;
+  temp3=theta0[&q2]*temp2;
+
+  do j=1 to _n[i];
+    V&ind2[j,j] = exp(theta0[&ind2]+temp1[j]);
+    V&ind1[j,j] = V&ind2[j,j]*theta0[&q2]*temp2[j];
+    V&q2[j,j] = V&ind2[j,j]*temp[j];
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[k]-timei[j]);
+      avg=(temp1[k]+temp1[j])/2;
+
+      V&ind2[j,k] = exp(theta0[&ind2]+avg+dist*logrho);
+      V&ind2[k,j] = V&ind2[j,k];
+
+      V&ind1[j,k] = V&ind2[j,k]*(temp3[j]+temp3[k])/2;
+      V&ind1[k,j] = V&ind1[j,k]; 
+
+      V&q1[j,k] = V&ind2[j,k] * dist / theta0[&q1];
+      V&q1[k,j] = V&q1[j,k];
+
+      V&q2[j,k] = V&ind2[j,k] * (temp[k]+temp[j])/2;;      
+      V&q2[k,j] = V&q2[j,k];
+    end;
+  end;
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend nou2derv;
+
+
+%macro nou3derv;      /* Deriv of var mat for NOU3 case  */
+
+  %do j=&q1 %to &q2;
+    V&j = j(_n[i], _n[i], 0);
+  %end;
+
+  %let ind1=%eval(&q1+1);
+  %let ind2=%eval(&q1+2);
+
+  timei=time[m1[i]:m2[i]];
+  timei2 = timei##2;
+
+  temp=theta0[&ind2]*timei + theta0[&q2]*timei2;
+  logrho=log(theta0[&q1]);
+
+  do j=1 to _n[i];
+    V&ind1[j,j] = exp(theta0[&ind1]+temp[j]);
+    V&ind2[j,j] = V&ind1[j,j]*timei[j];
+    V&q2[j,j] = V&ind1[j,j]*timei2[j];
+  end;
+
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[k]-timei[j]);
+      avg=(temp[k]+temp[j])/2;
+
+      V&ind1[j,k] = exp(theta0[&ind1]+avg+dist*logrho);
+      V&ind1[k,j] = V&ind1[j,k];
+   
+      V&q1[j,k] = V&ind1[j,k] * dist / theta0[&q1];
+      V&q1[k,j] = V&q1[j,k];
+
+      V&ind2[j,k] = V&ind1[j,k] * (timei[k]+timei[j])/2;      
+      V&ind2[k,j] = V&ind2[j,k];
+
+      V&q2[j,k] = V&ind1[j,k] * (timei2[k]+timei2[j])/2;      
+      V&q2[k,j] = V&q2[j,k];
+    end;
+  end;
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend nou3derv;
+
+%macro nou4derv;      /* Deriv of var mat for NOU4 case  */
+
+  %do j=&q1 %to &q2;
+    V&j = j(_n[i], _n[i], 0);
+  %end;
+
+  %let ind1=%eval(&q1+1);
+  %let ind2=%eval(&q1+2);
+
+  timei=time[m1[i]:m2[i]];
+  g1ti=g1t[m1[i]:m2[i]];
+  g2ti=g2t[m1[i]:m2[i]];
+
+  temp=theta0[&ind2]*g1ti + theta0[&q2]*g2ti;
+  logrho=log(theta0[&q1]);
+
+  do j=1 to _n[i];
+    V&ind1[j,j] = exp(theta0[&ind1]+temp[j]);
+    V&ind2[j,j] = V&ind1[j,j]*g1ti[j];
+    V&q2[j,j] = V&ind1[j,j]*g2ti[j];
+  end;
+
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[k]-timei[j]);
+      avg=(temp[k]+temp[j])/2;
+
+      V&ind1[j,k] = exp(theta0[&ind1]+avg+dist*logrho);
+      V&ind1[k,j] = V&ind1[j,k];
+   
+      V&q1[j,k] = V&ind1[j,k] * dist / theta0[&q1];
+      V&q1[k,j] = V&q1[j,k];
+
+      V&ind2[j,k] = V&ind1[j,k] * (g1ti[k]+g1ti[j])/2;      
+      V&ind2[k,j] = V&ind2[j,k];
+
+      V&q2[j,k] = V&ind1[j,k] * (g2ti[k]+g2ti[j])/2;      
+      V&q2[k,j] = V&q2[j,k];
+    end;
+  end;
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend nou4derv;
+
+%macro nou5derv;      /* Deriv of var mat for NOU5 case  */
+
+  %do j=&q1 %to &q2;
+    V&j = j(_n[i], _n[i], 0);
+  %end;
+
+  %let ind1=%eval(&q1+1);
+  %let ind2=%eval(&q1+2);
+
+  timei=time[m1[i]:m2[i]];
+  timei2=timei##2;
+
+  temp=theta0[&ind1]+theta0[&ind2]*timei + theta0[&q2]*timei2;
+  logrho=log(theta0[&q1]);
+
+  do j=1 to _n[i];
+    V&ind1[j,j] = 1;
+    V&ind2[j,j] = timei[j];
+    V&q2[j,j] = timei2[j];
+  end;
+
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[k]-timei[j]);
+      temp1 = sqrt(temp[k]/temp[j]);
+      temp2 = exp(dist*logrho);
+      temp3 = sqrt(temp[k]*temp[j]);
+
+      V&ind1[j,k] = (temp1+1/temp1)*temp2/2;
+      V&ind1[k,j] = V&ind1[j,k];
+   
+      V&q1[j,k] = temp3 * dist * temp2 / theta0[&q1];
+      V&q1[k,j] = V&q1[j,k];
+
+      V&ind2[j,k] = (temp1*timei[j]+timei[k]/temp1)*temp2/2;     
+      V&ind2[k,j] = V&ind2[j,k];
+
+      V&q2[j,k] =  (temp1*timei2[j]+timei2[k]/temp1)*temp2/2;   
+      V&q2[k,j] = V&q2[j,k];
+    end;
+  end;
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend nou5derv;
+
+
+%macro nou6derv;      /* Deriv of var mat for NOU6 case  */
+
+  %do j=&q1 %to &q2;
+    V&j = j(_n[i], _n[i], 0);
+  %end;
+
+  timei=time[m1[i]:m2[i]];
+  
+  %if %length(&gt)>0 and %upcase(&gt) ^= %upcase(&time) %then %do;
+    gti=gt[m1[i]:m2[i]];
+  %end;
+  %else %do;
+     gti=timei;
+  %end;
+
+ %let ind=%eval(&q1+1);
+
+  temp=theta0[&ind]+theta0[&q2]*gti;
+  logrho=log(theta0[&q1]);
+
+  do j=1 to _n[i];
+    V&ind[j,j] = 1;
+    V&q2[j,j] = gti[j];
+  end;
+
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[k]-timei[j]);
+      temp1 = sqrt(temp[k]/temp[j]);
+      temp2 = exp(dist*logrho);
+      temp3 = sqrt(temp[k]*temp[j]);
+
+      
+      V&ind[j,k] = (temp1+1/temp1)*temp2/2;
+      V&ind[k,j] = V&ind[j,k];
+   
+      V&q1[j,k] = temp3 * dist * temp2 / theta0[&q1];;
+      V&q1[k,j] = V&q1[j,k];
+
+      V&q2[j,k] = (temp1*gti[j]+gti[k]/temp1)*temp2/2;    
+      V&q2[k,j] = V&q2[j,k];
+    end;
+  end;
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend nou6derv;
+
+
+%macro nou7derv;      /* Deriv of var mat for NOU7 case  */
+
+  %do j=&q1 %to &q2;
+    V&j = j(_n[i], _n[i], 0);
+  %end;
+
+  %let ind1=%eval(&q1+1);
+  %let ind2=%eval(&q1+2);
+
+  timei=time[m1[i]:m2[i]];
+  g1ti=g1t[m1[i]:m2[i]];
+  g2ti=g2t[m1[i]:m2[i]];
+
+  temp=theta0[&ind1] + theta0[&ind2]*g1ti + theta0[&q2]*g2ti;
+  logrho=log(theta0[&q1]);
+
+  do j=1 to _n[i];
+    V&ind1[j,j] = 1;
+    V&ind2[j,j] = g1ti[j];
+    V&q2[j,j] = g2ti[j];
+  end;
+
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[k]-timei[j]);
+
+      temp1 = sqrt(temp[k]/temp[j]);
+      temp2 = exp(dist*logrho);
+      temp3 = sqrt(temp[k]*temp[j]);
+
+      V&ind1[j,k] = (temp1+1/temp1)*temp2/2;
+      V&ind1[k,j] = V&ind1[j,k];
+   
+      V&q1[j,k] = temp3 * dist * temp2 / theta0[&q1];
+      V&q1[k,j] = V&q1[j,k];
+
+      V&ind2[j,k] = (temp1*g1ti[j]+g1ti[k]/temp1)*temp2/2;     
+      V&ind2[k,j] = V&ind2[j,k];
+
+      V&q2[j,k] =  (temp1*g2ti[j]+g2ti[k]/temp1)*temp2/2;   
+      V&q2[k,j] = V&q2[j,k];
+ 
+    end;
+  end;
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend nou7derv;
+
+%macro iouderv;         /* Deriv of var mat for IOU case  */
+
+  V&q1 = j(_n[i], _n[i], 0);      /* d(V)/d(theta(q1))        */
+  V&q2 = j(_n[i], _n[i], 0);      /* d(V)/d(theta(q2))        */
+  
+  timei=time[m1[i]:m2[i]];
+  temp=theta0[&q1]*timei;
+  temp1=exp(-temp);
+  temp2=timei#temp1;
+  
+  alpha2=theta0[&q1]**2;
+  ratio=theta0[&q2]/theta0[&q1];
+
+  do j=1 to _n[i];
+    V&q2[j,j] = 2*(temp[j]+temp1[j]-1)/alpha2;
+    V&q1[j,j] = 2*((timei[j]-temp2[j])/theta0[&q1] - V&q2[j,j])*ratio;
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]); 
+      mst=min(temp[j], temp[k]);
+            
+      V&q2[j,k] = (2*mst+temp1[j]+temp1[k]-1-exp(-theta0[&q1]*dist))/alpha2;
+      V&q2[k,j] = V&q2[j,k];
+      
+      mst=min(timei[j],timei[k]); 
+      V&q1[j,k] = ((2*mst-temp2[j]-temp2[k]
+                  +dist*exp(-theta0[&q1]*dist))/theta0[&q1] 
+                  - 2*V&q2[j,k])*ratio;
+      V&q1[k,j] = V&q1[j,k];       
+
+    end;
+  end;  
+
+  %if &callin=0 %then %do;
+    %do k=&q1 %to &q2;    
+      WV&k = W * V&k;
+      uV&k = (ui)` * V&k;
+    %end;
+    %if (&smth=0 or &test=1) and &reml=1 %then
+      %do k=&q1 %to &q2;
+        XWV&k&W = (Xi)` * WV&k * W;
+      %end;
+    %else %if &smth=1 and &test=0 %then
+      %do k=&q1 %to &q2;
+        HWV&k&W = (Hi)` * WV&k * W; 
+      %end;
+  %end;
+
+%mend iouderv;
+
+
+%macro wderv;         /* Deriv of var mat for Wiener case  */
+  
+  V&q1 = j(_n[i], _n[i], 0);        /* d(V)/d(theta(q1))        */
+  timei = time[m1[i]:m2[i]];
+
+  do j=1 to _n[i];
+    V&q1[j,j] = timei[j];
+  end;    
+
+  do j=2 to _n[i];
+    do k=1 to j-1;   
+      V&q1[j,k] = min(timei[j], timei[k]);
+      V&q1[k,j] = V&q1[j,k];
+    end;
+  end;
+
+  %if &callin=0 %then %do;
+    WV&q1 = W * V&q1;
+    uV&q1 = (ui)` * V&q1;
+
+    %if (&smth=0 or &test=1) and &reml=1 %then %do;
+      XWV&q1&W = (Xi)` * WV&q1 * W; 
+    %end;
+    %else %if &smth=1 and &test=0 %then %do;
+      HWV&q1&W = (Hi)` * WV&q1 * W;
+    %end;
+  %end;
+
+%mend wderv;
+
+
+%macro iwderv;      /* Deriv of var mat for IW case  */
+  
+  V&q1 = j(_n[i], _n[i], 0);        /* d(V)/d(theta(q1))        */
+  timei = time[m1[i]:m2[i]];
+
+  do j=1 to _n[i];
+    do k=1 to j;   
+      time1=min(timei[j],timei[k]);
+      time2=max(timei[j],timei[k]); 
+      V&q1[j,k] = time1**2*(3*time2-time1)/6;
+    end;
+  end;  
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      V&q1[k,j] = V&q1[j,k]; 
+    end;
+  end; 
+ 
+  %if &callin=0 %then %do;
+    WV&q1 = W * V&q1;
+    uV&q1 = (ui)` * V&q1;
+
+    %if (&smth=0 or &test=1) and &reml=1 %then %do;
+      XWV&q1&W = (Xi)` * WV&q1 * W; 
+    %end;
+    %else %if &smth=1 and &test=0 %then %do;
+      HWV&q1&W = (Hi)` * WV&q1 * W;
+    %end;
+  %end;
+
+%mend iwderv;
+
+
+  /*******************************************************/
+  /*                                                     */
+  /*     This macro updates the var comp for linear      */
+  /*   mixed model using ML method                       */
+  /*                                                     */
+  /*******************************************************/
+
+%macro findpar0;
+
+  Deriv = j(&dim, 1, 0);
+  FInfo = j(&dim, &dim, 0);
+
+  do i=1 to m;  /* BEGINING of the BIG loop  */
+    
+    W = formmat(WM[vstart[i]:vend[i]]);
+    ui = PY[m1[i]: m2[i]];
+
+    %if &nzs>0 %then 
+      %do j=1 %to &q;
+        a=rowcol(&j);
+        z1 = Z[m1[i]: m2[i], a[1]];
+        z2 = Z[m1[i]: m2[i], a[2]];
+               
+        temp = z1 * (z2)`;
+
+        if a[1] = a[2] then do;
+          WV&j = W * temp;
+          uV&j = (ui)` * temp;
+        end;
+        else do;
+          temp = temp + (temp)`;
+          WV&j = W * temp; 
+          uV&j = (ui)` * temp;
+        end;
+      %end;
+
+    %if &prs>0 %then %do;
+      %if &type=1 %then 
+        %arderv;
+      %else %if &type=2 %then
+        %ouderv;
+      %else %if &type=3 %then 
+        %nou1derv;
+      %else %if &type=4 %then 
+        %nou2derv;
+      %else %if &type=5 %then 
+        %nou3derv;
+      %else %if &type=6 %then
+        %iouderv;
+      %else %if &type=7 %then
+        %wderv;
+      %else %if &type=8 %then
+        %iwderv;
+      %else %if &type=9 %then 
+        %nou4derv;
+      %else %if &type=10 %then 
+        %nou5derv;
+      %else %if &type=11 %then 
+        %nou6derv;
+      %else %if &type=12 %then 
+        %nou7derv;
+    %end;
+   
+
+    %if &msr>0 %then %do;
+      WV&dim = W;
+    %end;
+
+   /*   Find F_{jk}   */
+
+    %if &msr=0 %then
+      %do j = 1 %to &dim;
+        Deriv[&j] = Deriv[&j] + uV&j * ui - trace(WV&j);
+      %end;
+    %else %do;
+      %do j = 1 %to &q2;
+        Deriv[&j] = Deriv[&j] + uV&j * ui - trace(WV&j);
+      %end; 
+      Deriv[&dim] = Deriv[&dim] + (ui)` * ui - trace(W); 
+    %end;
+
+   
+    %do k=1 %to &dim;
+      temp1 = WV&k;
+      %do j=&k %to &dim;
+        FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);       
+      %end;
+    %end; 
+ 
+  end;             /* END of the BIG loop  */
+
+
+    /*  End of Finding FInfo[k,j]  */
+
+
+  Deriv = Deriv/2; 
+
+  do i=1 to &dim;
+    do j=1 to i-1;
+      FInfo[i,j] = FInfo[j,i];
+    end;
+  end;      
+
+  FInfo = FInfo/2;
+
+  Finv = inv(FInfo);
+  theta1 = Finv * Deriv + theta0;
+
+%mend findpar0;
+
+
+
+
+  /*******************************************************/
+  /*                                                     */
+  /*     This macro updates the var comp for linear      */
+  /*   mixed model using REML method                     */
+  /*                                                     */
+  /*******************************************************/
+
+%macro findpar1;
+
+  Deriv = j(&dim, 1, 0);
+  FInfo = j(&dim, &dim, 0);
+
+  
+  %do i=1 %to &dim;                
+    F&i = j(dimb, dimb, 0);
+  %end;
+  
+
+  %do i=1 %to &dim;
+    %do j=&i %to &dim;               
+      F&i&j = j(dimb, dimb, 0);
+    %end;
+  %end;
+
+  do i=1 to m;  /* BEGINING of the BIG loop  */
+
+    W = formmat(WM[vstart[i]:vend[i]]);
+    Xi = X[m1[i]: m2[i],];
+    ui = PY[m1[i]: m2[i]];
+
+    %if &nzs>0 %then 
+      %do j=1 %to &q;
+        a=rowcol(&j);
+        z1 = Z[m1[i]: m2[i], a[1]];
+        z2 = Z[m1[i]: m2[i], a[2]];
+               
+        temp = z1 * (z2)`;
+
+        if a[1] = a[2] then do;
+          WV&j = W * temp;
+          uV&j = (ui)` * temp;
+        end;
+        else do;
+          temp = temp + (temp)`;
+          WV&j = W * temp; 
+          uV&j = (ui)` * temp;
+        end;
+        XWV&j&W = (Xi)` * WV&j * W;
+      %end;
+
+    %if &prs>0 %then %do;
+      %if &type=1 %then 
+        %arderv;
+      %else %if &type=2 %then
+        %ouderv;
+      %else %if &type=3 %then 
+        %nou1derv;
+      %else %if &type=4 %then 
+        %nou2derv;
+      %else %if &type=5 %then 
+        %nou3derv;
+      %else %if &type=6 %then
+        %iouderv;
+      %else %if &type=7 %then
+        %wderv;
+      %else %if &type=8 %then
+        %iwderv;
+      %else %if &type=9 %then 
+        %nou4derv;
+      %else %if &type=10 %then 
+        %nou5derv;
+      %else %if &type=11 %then 
+        %nou6derv;
+      %else %if &type=12 %then 
+        %nou7derv;
+    %end;
+
+
+    %if &msr>0 %then %do;
+      WV&dim = W;
+      WX = W * Xi;
+    %end;
+
+
+   /*   Find F_{jk}   */
+
+    %if &msr=0 %then
+      %do j = 1 %to &dim;
+        Deriv[&j] = Deriv[&j] + uV&j * ui - trace(WV&j);
+        F&j = F&j + XWV&j&W * Xi;
+      %end;
+    %else %do;
+      %do j = 1 %to &q2;
+        Deriv[&j] = Deriv[&j] + uV&j * ui - trace(WV&j);
+        F&j = F&j + XWV&j&W * Xi;
+      %end; 
+      Deriv[&dim] = Deriv[&dim] + (ui)` * ui - trace(W); 
+      F&dim = F&dim + (WX)` * WX;
+    %end;
+
+
+    %if &msr=0 %then
+      %do k=1 %to &dim;
+        temp1 = WV&k;
+        temp2 = (Xi)` * temp1;
+        %do j=&k %to &dim;                
+          F&k&j = F&k&j + temp2 * (XWV&j&W)`;
+          FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);       
+        %end;
+      %end;
+    %else       
+      %do k=1 %to &dim;
+        temp1 = WV&k;
+        temp2 = (Xi)` * temp1;
+        %do j=&k %to &dim;
+          if &j=&dim then do;
+            if &k<&j then 
+            do;
+              F&k&j = F&k&j + XWV&k&W * WX;
+              FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+            end; 
+            else 
+            do; 
+              F&k&j = F&k&j + (WX)` * W * WX;
+              FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+            end;
+          end;
+          else do;                   
+            F&k&j = F&k&j + temp2 * (XWV&j&W)`;
+            FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+          end;        
+        %end;
+      %end;     
+ 
+  end;             /* END of the BIG loop  */
+
+  %do j=1 %to &dim;
+    F&j = F&j * Cinv;
+    Deriv[&j] = Deriv[&j] + trace(F&j);
+  %end;
+
+  %do k=1 %to &dim;
+    temp = F&k;
+    %do j=&k %to &dim;
+      FInfo[&k,&j] = FInfo[&k,&j] - 2*trc(F&k&j, Cinv) 
+                    + trc(temp, F&j);               
+    %end;
+  %end;
+
+    /*  End of Finding FInfo[k,j]  */
+
+
+  Deriv = Deriv/2; 
+
+  do i=1 to &dim;
+    do j=1 to i-1;
+      FInfo[i,j] = FInfo[j,i];
+    end;
+  end;      
+
+  FInfo = FInfo/2;
+
+  Finv = inv(FInfo);
+  theta1 = Finv * Deriv + theta0;
+
+%mend findpar1;
+
+
+
+  /*******************************************************/
+  /*                                                     */
+  /*     This macro updates the smoothing parm           */
+  /*   and var comp for smoothing problem                */
+  /*                                                     */
+  /*******************************************************/
+
+%macro findpar2;
+
+  /* Finds derivatives, FInfoer and observed Info  */
+
+  Deriv = j(&dim, 1, 0);
+  FInfo = j(&dim, &dim, 0);
+ 
+  temp1 = B` * NTmat(PY);             /*  temp1 = H2`*PY   */
+
+  Deriv[1] = (temp1)` * temp1;
+
+  temp = C0[np:dimb, np:dimb]; /* temp=H2`WH2 */
+
+  H2WH = C0[np:dimb, ];         /*  H2WH  = H2`WH   */                             
+
+  HC = H2WH * Cinv;
+
+  temp2 = HC * (H2WH)`;             /*  temp2 = H2`WH Cinv H`WH2  */
+
+  temp = temp - temp2;           /* temp = H2`PH2 = H2`WH2 - H2`WH Cinv H`WH2  */
+
+  Deriv[1] = Deriv[1] - trace(temp);
+
+  temp1 = temp;
+
+  FInfo[1,1] = trc(temp, temp1);
+
+    
+  /* get other elements of Deriv and FInfoer, observed info  */
+   
+  %do j=2 %to &dim;   
+    F1&j = j(dimb, dimb, 0);
+  %end;
+
+  %do i=2 %to &dim;
+    %do j=&i %to &dim;               
+      F&i&j = j(dimb, dimb, 0);
+    %end;
+  %end;
+  
+
+  do i=1 to m;  /* BEGINING of the BIG loop  */
+
+    W = formmat(WM[vstart[i]:vend[i]]);
+    Hi = X[m1[i]: m2[i],] || NB(i);
+    ui = PY[m1[i]: m2[i]];
+
+    %if &nzs>0 %then 
+      %do j=2 %to &q;
+        a=rowcol(&j-1);
+        z1 = Z[m1[i]: m2[i], a[1]];
+        z2 = Z[m1[i]: m2[i], a[2]];
+               
+        temp = z1 * (z2)`;
+
+        if a[1] = a[2] then do;
+          WV&j = W * temp;
+          uV&j = (ui)` * temp;
+        end;
+        else do;
+          temp = temp + (temp)`;
+          WV&j = W * temp; 
+          uV&j = (ui)` * temp;
+        end;
+        HWV&j&W = (Hi)` * WV&j * W;
+      %end;
+
+
+    %if &prs>0 %then %do;
+      %if &type=1 %then 
+        %arderv;
+      %else %if &type=2 %then
+        %ouderv;
+      %else %if &type=3 %then 
+        %nou1derv;
+      %else %if &type=4 %then 
+        %nou2derv;
+      %else %if &type=5 %then 
+        %nou3derv;
+      %else %if &type=6 %then
+        %iouderv;
+      %else %if &type=7 %then
+        %wderv;
+      %else %if &type=8 %then
+        %iwderv;
+      %else %if &type=9 %then 
+        %nou4derv;
+      %else %if &type=10 %then 
+        %nou5derv;
+      %else %if &type=11 %then 
+        %nou6derv;
+      %else %if &type=12 %then 
+        %nou7derv;
+    %end;
+   
+
+    %if &msr>0 %then %do;
+      WV&dim = W;
+      WH = W * Hi;
+    %end;
+ 
+
+   /*   Find F_{jk}   */
+ 
+    %if &msr=0 %then
+      %do j = 2 %to &dim;
+        Deriv[&j] = Deriv[&j] + uV&j * ui - trace(WV&j);
+        F1&j = F1&j + HWV&j&W * Hi;
+      %end;
+    %else %do;
+      %do j = 2 %to &q2;
+        Deriv[&j] = Deriv[&j] + uV&j * ui - trace(WV&j);
+        F1&j = F1&j + HWV&j&W * Hi;
+      %end; 
+      Deriv[&dim] = Deriv[&dim] + (ui)` * ui - trace(W); 
+      F1&dim = F1&dim + (WH)` * WH;
+    %end;
+
+
+    %if &msr=0 %then
+      %do k=2 %to &dim;
+        temp1 = WV&k;
+        temp2 = (Hi)` * temp1;
+        %do j=&k %to &dim;                
+          F&k&j = F&k&j + temp2 * (HWV&j&W)`;
+          FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);       
+        %end;
+      %end;
+    %else       
+      %do k=2 %to &dim;
+        temp1 = WV&k;
+        temp2 = (Hi)` * temp1;
+        %do j=&k %to &dim;
+          if &j=&dim then do;
+            if &k<&j then 
+            do;
+              F&k&j = F&k&j + HWV&k&W * WH;
+              FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+            end; 
+            else 
+            do; 
+              F&k&j = F&k&j + (WH)` * W * WH;
+              FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+            end;
+          end;
+          else do;                   
+            F&k&j = F&k&j + temp2 * (HWV&j&W)`;
+            FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+          end;        
+        %end;
+      %end;     
+ 
+  end;             /* END of the BIG loop  */
+
+
+  temp = (H2WH)` * HC;
+
+  %do j=2 %to &dim;
+    FInfo[1,&j] = trace(F1&j[np:dimb,np:dimb])  
+               - 2*trc(F1&j[,np:dimb], HC);
+    F1&j = F1&j * Cinv;
+    FInfo[1, &j] = FInfo[1, &j] + trc(temp, F1&j);
+    Deriv[&j] = Deriv[&j] + trace(F1&j);
+  %end;
+  
+  
+  %do k=2 %to &dim;
+    temp = F1&k;
+    %do j=&k %to &dim;
+      FInfo[&k,&j] = FInfo[&k,&j] - 2*trc(F&k&j, Cinv) 
+                    + trc(temp, F1&j);               
+    %end;
+  %end;
+
+    /*  End of Finding FInfo[k,j]  */
+
+   
+  Deriv = Deriv/2; 
+
+  do i=1 to &dim;
+    do j=1 to i-1;
+      FInfo[i,j] = FInfo[j,i];
+    end;
+  end;      
+
+  FInfo = FInfo/2;
+
+  Finv = inv(FInfo);
+  theta1 = Finv * Deriv + theta0;
+
+%mend findpar2;
+
+
+  /*******************************************************/
+  /*                                                     */
+  /*     This macro updates the var comp for smoothing   */
+  /*   problem given the smoothing parameter             */
+  /*                                                     */
+  /*******************************************************/
+
+%macro findpar3;
+
+  /* Finds derivatives, FInfoer and observed Info  */
+
+  Deriv = j(&dim, 1, 0);
+  FInfo = j(&dim, &dim, 0);
+
+  %do j=1 %to &dim;   
+    F&j = j(dimb, dimb, 0);
+  %end;
+
+  %do i=1 %to &dim;
+    %do j=&i %to &dim;               
+      F&i&j = j(dimb, dimb, 0);
+    %end;
+  %end;
+
+ 
+  do i=1 to m;  /* BEGINING of the BIG loop  */
+
+    W = formmat(WM[vstart[i]:vend[i]]);
+    Hi = X[m1[i]: m2[i],] || NB(i);
+    ui = PY[m1[i]: m2[i]];
+
+    %if &nzs>0 %then 
+      %do j=1 %to &q;
+        a=rowcol(&j);
+        z1 = Z[m1[i]: m2[i], a[1]];
+        z2 = Z[m1[i]: m2[i], a[2]];
+               
+        temp = z1 * (z2)`;
+
+        if a[1] = a[2] then do;
+          WV&j = W * temp;
+          uV&j = (ui)` * temp;
+        end;
+        else do;
+          temp = temp + (temp)`;
+          WV&j = W * temp; 
+          uV&j = (ui)` * temp;
+        end;
+        HWV&j&W = (Hi)` * WV&j * W;
+      %end;
+
+    %if &prs>0 %then %do;
+      %if &type=1 %then 
+        %arderv;
+      %else %if &type=2 %then
+        %ouderv;
+      %else %if &type=3 %then 
+        %nou1derv;
+      %else %if &type=4 %then 
+        %nou2derv;
+      %else %if &type=5 %then 
+        %nou3derv;
+      %else %if &type=6 %then
+        %iouderv;
+      %else %if &type=7 %then
+        %wderv;
+      %else %if &type=8 %then
+        %iwderv;
+      %else %if &type=9 %then 
+        %nou4derv;
+      %else %if &type=10 %then 
+        %nou5derv;
+      %else %if &type=11 %then 
+        %nou6derv;
+      %else %if &type=12 %then 
+        %nou7derv;
+    %end;
+   
+
+    %if &msr>0 %then %do;
+      WV&dim = W;
+      WH = W * Hi;
+    %end;
+ 
+   /*   Find F_{jk}   */
+ 
+    %if &msr=0 %then
+      %do j = 1 %to &dim;
+        Deriv[&j] = Deriv[&j] + uV&j * ui - trace(WV&j);
+        F&j = F&j + HWV&j&W * Hi;
+      %end;
+    %else %do;
+      %do j = 1 %to &q2;
+        Deriv[&j] = Deriv[&j] + uV&j * ui - trace(WV&j);
+        F&j = F&j + HWV&j&W * Hi;
+      %end; 
+      Deriv[&dim] = Deriv[&dim] + (ui)` * ui - trace(W); 
+      F&dim = F&dim + (WH)` * WH;
+    %end;
+
+    %if &msr=0 %then
+      %do k=1 %to &dim;
+        temp1 = WV&k;
+        temp2 = (Hi)` * temp1;
+        %do j=&k %to &dim;                
+          F&k&j = F&k&j + temp2 * (HWV&j&W)`;
+          FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);       
+        %end;
+      %end;
+    %else       
+      %do k=1 %to &dim;
+        temp1 = WV&k;
+        temp2 = (Hi)` * temp1;
+        %do j=&k %to &dim;
+          if &j=&dim then do;
+            if &k<&j then 
+            do;
+              F&k&j = F&k&j + HWV&k&W * WH;
+              FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+            end; 
+            else 
+            do; 
+              F&k&j = F&k&j + (WH)` * W * WH;
+              FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+            end;
+          end;
+          else do;                   
+            F&k&j = F&k&j + temp2 * (HWV&j&W)`;
+            FInfo[&k,&j] = FInfo[&k,&j] + trc(temp1, WV&j);
+          end;        
+        %end;
+      %end;     
+ 
+  end;             /* END of the BIG loop  */
+
+
+  %do j=1 %to &dim;
+    F&j = F&j * Cinv;
+    Deriv[&j] = Deriv[&j] + trace(F&j);
+  %end;
+
+  %do k=1 %to &dim;
+    temp = F&k;
+    %do j=&k %to &dim;
+      FInfo[&k,&j] = FInfo[&k,&j] - 2*trc(F&k&j, Cinv) 
+                    + trc(temp, F&j);               
+    %end;
+  %end;
+
+
+    /*  End of Finding FInfo[k,j]  */
+
+   
+  Deriv = Deriv/2; 
+
+  do i=1 to &dim;
+    do j=1 to i-1;
+      FInfo[i,j] = FInfo[j,i];
+    end;
+  end;      
+
+  FInfo = FInfo/2;
+
+  Finv = inv(FInfo);
+  theta1 = Finv * Deriv + theta0;
+
+%mend findpar3;
+
+   
+   /*  Check if theta1 is in the parm space */
+
+%macro findcrt2;
+
+  %if &smth=1 and &lam=0 and &test=0 %then %do;
+    crit2 = theta1[1]>0;
+    l=2;
+  %end;
+  %else %do;
+    crit2=1;
+    l=1;
+  %end;
+
+  %if &nzs>0 %then %do; 
+  if crit2=1 then do;
+    do i=1 to &nzs;
+      do j=1 to i;
+        D[i,j] = theta1[l];
+        D[j,i] = D[i,j];
+        l=l+1;
+      end;
+    end;
+    temp=eigval(D);
+    do i=1 to &nzs;    
+      crit2 = crit2 & temp[i]>0;
+    end;
+  end;
+  %end;
+
+  %if &prs>0 %then %do;
+    if &type=1 then
+      crit2 = crit2 & abs(theta1[&q1])<=1 & theta1[&q2]>0;
+    else if &type=2 then
+      crit2 = crit2 & theta1[&q1]<=1 & theta1[&q1]>0 & theta1[&q2]>0;
+    else if &type=3 then
+      crit2 = crit2 & theta1[&q1]<=1 & theta1[&q1]>0;
+    else if &type=4 then
+      crit2 = crit2 & theta1[&q1]<=1 & theta1[&q1]>0;
+    else if &type=5 then
+      crit2 = crit2 & theta1[&q1]<=1 & theta1[&q1]>0;
+    else if &type=6 then
+      crit2 = crit2 & theta1[&q1]>0 & theta1[&q2]>0;
+    else if &type=7 then
+      crit2 = crit2 & theta1[&q1]>0;
+    else if &type=8 then
+      crit2 = crit2 & theta1[&q1]>0;
+    else if &type=9 then
+      crit2 = crit2 & theta1[&q1]<=1 & theta1[&q1]>0; 
+    else if &type=10 then do;
+      varn1 = theta1[&q1+1] + theta1[&q1+2]*mint + theta1[&q2]*mint**2;
+      varn2 = theta1[&q1+1] + theta1[&q1+2]*maxt + theta1[&q2]*maxt**2;     
+      minvar=min(varn1, varn2);
+      if theta1[&q2]>0 then do;
+        tzero = - theta1[&q1+2]/(2*theta1[&q2]);
+        if tzero > mint & tzero < maxt then do;
+           varn = theta1[&q1+1] + theta1[&q1+2]*tzero + theta1[&q2]*tzero**2;
+           minvar=min(minvar, varn);
+        end;
+      end;     
+      crit2 = crit2 & theta1[&q1]<=1 & theta1[&q1]>0 & minvar>0; 
+    end;
+    else if &type=11 then do;
+      varn = theta1[&q1+1] + theta1[&q2]#gt;
+      minvar = min(varn); 
+      crit2 = crit2 & theta1[&q1]<=1 & theta1[&q1]>0 & minvar>0; 
+    end;
+    else if &type=12 then do;
+      varn = theta1[&q1+1] + theta1[&q1+2]#g1t + theta1[&q2]#g2t;
+      minvar = min(varn); 
+      crit2 = crit2 & theta1[&q1]<=1 & theta1[&q1]>0 & minvar>0; 
+    end;
+  %end;  
+
+  %if &msr>0 %then %do;
+    crit2 = crit2 & theta1[&dim]>0;
+  %end;
+
+%mend findcrt2;
+
+
+%macro arvarn;              /* variance for ar process */
+
+  do j=1 to _n[i];
+    E[j,j] = theta1[&q2];
+  end;
+  do k=2 to _n[i];
+    E[1,k] = E[1, k-1]*theta1[&q1];
+    do j=2 to _n[i]+1-k;
+      E[j, j+k-1] = E[1,k];
+    end;
+  end;
+  do k=2 to _n[i];
+    do j=1 to _n[i]+1-k;
+      E[j+k-1,j] = E[j,j+k-1];
+    end;
+  end; 
+
+%mend arvarn;
+
+
+%macro ouvarn;             /*  variance for OU process  */
+
+  logrho=log(theta1[&q1]);
+  timei=time[m1[i]: m2[i]];
+
+  do j=1 to _n[i];
+    E[j,j] = theta1[&q2];
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);
+      E[j,k] = theta1[&q2]*exp(dist*logrho);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend ouvarn;
+
+
+%macro nou1varn;           /*  variance for NOU1 process */
+
+  logrho=log(theta1[&q1]);
+  timei=time[m1[i]: m2[i]];
+
+  %if %length(&gt)>0 and %upcase(&gt) ^= %upcase(&time) %then %do;
+    temp=theta1[&q2]*gt[m1[i]: m2[i]];
+  %end;
+  %else %do;
+    temp=theta1[&q2]*timei;
+  %end;
+
+  do j=1 to _n[i];
+    E[j,j] = exp(theta1[&q1+1]+temp[j]);
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);
+      avg=(temp[j]+temp[k])/2;
+      E[j,k] = exp(theta1[&q1+1]+avg+dist*logrho);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend nou1varn;
+
+
+%macro nou2varn;           /*  variance for NOU2 process */
+
+  logrho=log(theta1[&q1]);
+  timei=time[m1[i]: m2[i]];
+  temp=theta1[&q2]*exp(theta1[&q1+1]*timei);
+
+  do j=1 to _n[i];
+    E[j,j] = exp(theta1[&q1+2]+temp[j]);
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);
+      avg=(temp[j]+temp[k])/2;
+      E[j,k] = exp(theta1[&q1+2]+avg+dist*logrho);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend nou2varn;
+
+
+%macro nou3varn;           /*  variance for NOU3 process */
+
+  logrho=log(theta1[&q1]);
+  timei=time[m1[i]: m2[i]];
+  temp=theta1[&q1+2]*timei + theta1[&q2]*timei##2;
+
+  do j=1 to _n[i];
+    E[j,j] = exp(theta1[&q1+1]+temp[j]);
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);
+      avg=(temp[j]+temp[k])/2;
+      E[j,k] = exp(theta1[&q1+1]+avg+dist*logrho);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend nou3varn;
+
+
+%macro nou4varn;           /*  variance for NOU4 process */
+
+  logrho=log(theta1[&q1]);
+  timei=time[m1[i]: m2[i]];
+  g1ti=g1t[m1[i]: m2[i]];
+  g2ti=g2t[m1[i]: m2[i]]; 
+  temp=theta1[&q1+2]*g1ti + theta1[&q2]*g2ti;
+
+  do j=1 to _n[i];
+    E[j,j] = exp(theta1[&q1+1]+temp[j]);
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);
+      avg=(temp[j]+temp[k])/2;
+      E[j,k] = exp(theta1[&q1+1]+avg+dist*logrho);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend nou4varn;
+
+
+%macro nou5varn;           /*  variance for NOU5 process */
+
+  logrho=log(theta1[&q1]);
+  timei=time[m1[i]: m2[i]];
+  temp=theta1[&q1+1] + theta1[&q1+2]*timei + theta1[&q2]*timei##2;
+
+  do j=1 to _n[i];
+    E[j,j] = temp[j];
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);      
+      E[j,k] = sqrt(temp[j]*temp[k])*exp(dist*logrho);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend nou5varn;
+
+%macro nou6varn;           /*  variance for NOU6 process */
+
+  logrho=log(theta1[&q1]);
+  timei=time[m1[i]: m2[i]];
+
+  %if %length(&gt)>0 and %upcase(&gt) ^= %upcase(&time) %then %do;
+    temp=theta1[&q1+1] + theta1[&q2]*gt[m1[i]: m2[i]];
+  %end;
+  %else %do;
+    temp=theta1[&q1+1] + theta1[&q2]*timei;
+  %end;
+
+  do j=1 to _n[i];
+    E[j,j] = temp[j];
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);
+      E[j,k] = sqrt(temp[j]*temp[k])*exp(dist*logrho);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend nou6varn;
+
+
+%macro nou7varn;           /*  variance for NOU7 process */
+
+  logrho=log(theta1[&q1]);
+  timei=time[m1[i]: m2[i]];
+  g1ti=g1t[m1[i]: m2[i]];
+  g2ti=g2t[m1[i]: m2[i]]; 
+  temp=theta1[&q1+1] + theta1[&q1+2]*g1ti + theta1[&q2]*g2ti;
+
+  do j=1 to _n[i];
+    E[j,j] = temp[j];
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);     
+      E[j,k] = sqrt(temp[j]*temp[k])*exp(dist*logrho);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend nou7varn;
+
+
+%macro iouvarn;        /*  variance for IOU process  */
+
+  timei=time[m1[i]: m2[i]];
+  temp=theta1[&q1]*timei;
+  temp1=exp(-temp);
+
+  ratio=theta1[&q2]/(theta1[&q1]**2);
+
+  do j=1 to _n[i];
+    E[j,j] = 2*(temp[j]+temp1[j]-1)*ratio;
+  end;
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      dist=abs(timei[j]-timei[k]);
+      mst=min(temp[j], temp[k]);
+            
+      E[j,k] = (2*mst+temp1[j]+temp1[k]-1-exp(-theta1[&q1]*dist))*ratio;
+      E[k,j] = E[j,k];
+    end;
+  end;  
+
+%mend iouvarn;
+
+
+%macro wvarn;        /* variance for Wiener process */
+
+  temp=theta1[&q1]*time[m1[i]: m2[i]];
+
+  do j=1 to _n[i];
+    E[j,j] = temp[j];
+  end;    
+
+  do j=2 to _n[i];
+    do k=1 to j-1;   
+      E[j,k] = min(temp[j], temp[k]);
+      E[k,j] = E[j,k];
+    end;
+  end;
+
+%mend wvarn;
+
+
+%macro iwvarn;       /* variance for IW process */ 
+
+  timei=time[m1[i]: m2[i]];
+  
+  do j=1 to _n[i];
+    do k=1 to j;   
+      time1=min(timei[j],timei[k]);
+      time2=max(timei[j],timei[k]); 
+      E[j,k] = theta1[&q1]*time1**2*(3*time2-time1)/6;
+    end;
+  end;  
+
+  do j=2 to _n[i];
+    do k=1 to j-1;
+      E[k,j] = E[j,k]; 
+    end;
+  end; 
+
+%mend iwvarn;
+
+
+%macro setconst;
+
+  pi = 4*atan(1);
+
+  %if &smth=0 %then %do;
+    %if &method=ML %then %do;
+      const = - n*log(2*pi);
+    %end;
+    %else %do;
+      const = - (n-dimb)*log(2*pi);
+    %end;
+  %end;
+  %else %do;
+    const = - (n-&nxs-2)*log(2*pi);
+  %end;
+
+%mend setconst;
+
+
+   /*  Calculate log likelihood  at theta1 (free of beta) */
+
+%macro findlik0;
+
+  XWY = j(dimb, 1, 0);              /* XWY = X` * W * Y           */
+  WY = j(n,1,0);
+  C = j(dimb,dimb,0);             /* Initialize the coef matrix */
+
+  %if &nzs>0 %then %do;
+    D = formmat(theta1[1:&q]); 
+  %end;  
+
+
+  lik1=0;
+
+  do i=1 to m;   
+    E = j(_n[i], _n[i], 0);
+
+    %if &prs>0 %then %do;      
+      %if &type=1 %then                       /*     AR case      */ 
+        %arvarn; 
+      %else %if &type=2 %then                 /*     OU case      */  
+        %ouvarn;
+      %else %if &type=3 %then                 /*     NOU1 case    */ 
+        %nou1varn;
+      %else %if &type=4 %then                 /*     NOU2 case    */ 
+        %nou2varn;
+      %else %if &type=5 %then                 /*     NOU3 case    */ 
+        %nou3varn;
+      %else %if &type=6 %then                 /*     IOU case     */
+        %iouvarn;
+      %else %if &type=7 %then                 /*     Wiener case  */
+        %wvarn;
+      %else %if &type=8 %then                 /*     IW case      */
+        %iwvarn;
+      %else %if &type=9 %then                 /*     NOU4 case    */ 
+        %nou4varn;
+      %else %if &type=10 %then                /*     NOU5 case    */ 
+        %nou5varn;
+      %else %if &type=11 %then                /*     NOU6 case    */ 
+        %nou6varn;
+      %else %if &type=12 %then                /*     NOU7 case    */ 
+        %nou7varn;
+    %end;
+   
+    %if &msr>0 %then %do;                     /*  measurement error */                          
+      do j=1 to _n[i];
+        E[j,j] = E[j,j] + theta1[&dim];
+      end;
+    %end;
+
+    %if &nzs>0 %then %do; 
+      Zi = Z[m1[i]: m2[i],];
+      E = E + Zi * D * (Zi)`;             /*  add  Zi*D*(Zi)` to D  */
+    %end;
+
+    temp = inv(E);
+    WM[vstart[i]:vend[i]] = formvec(temp);   /*  Save W in a vector   */
+    
+    lik1 = lik1 - log(det(E));
+
+    Xi = X[m1[i]: m2[i], ];
+    Yi = Y[m1[i]: m2[i]];
+    WYi = temp * Yi;
+    WY[m1[i]: m2[i]] = WYi;
+    C = C + (Xi)` * temp * Xi;
+    XWY = XWY + (Xi)` * WYi;
+   
+  end;
+
+  Cinv = inv(C);
+
+  beta1 = Cinv * XWY;
+
+  PY = j(n,1,0);
+
+  do i=1 to m;
+     W = formmat(WM[vstart[i]:vend[i]]);
+     Xi = X[m1[i]: m2[i], ];
+     PY[m1[i]: m2[i]] = W * Xi * beta1;
+  end;  
+
+  PY = WY - PY;
+
+  lik1 = (lik1 - (Y)`*PY + const)/2;
+
+%mend findlik0;
+
+   /*  Calculate log REML likelihood  at theta1 (free of beta) */
+
+%macro findlik1;
+
+  XWY = j(dimb, 1, 0);                /* XWY = X` * W * Y           */
+  WY = j(n,1,0);
+  C = j(dimb,dimb,0);                 /* Initialize the coef matrix */
+
+  %if &nzs>0 %then %do;
+    D = formmat(theta1[1:&q]); 
+  %end;  
+
+  lik1=0;
+
+  do i=1 to m;   
+    E = j(_n[i], _n[i], 0);
+
+    %if &prs>0 %then %do;      
+      %if &type=1 %then                       /*     AR case      */ 
+        %arvarn; 
+      %else %if &type=2 %then                 /*     OU case      */  
+        %ouvarn;
+      %else %if &type=3 %then                 /*     NOU1 case    */ 
+        %nou1varn;
+      %else %if &type=4 %then                 /*     NOU2 case    */ 
+        %nou2varn;
+      %else %if &type=5 %then                 /*     NOU3 case    */ 
+        %nou3varn;
+      %else %if &type=6 %then                 /*     IOU case     */
+        %iouvarn;
+      %else %if &type=7 %then                 /*     Wiener case  */
+        %wvarn;
+      %else %if &type=8 %then                 /*     IW case      */
+        %iwvarn;
+      %else %if &type=9 %then                 /*     NOU4 case    */ 
+        %nou4varn;
+      %else %if &type=10 %then                /*     NOU5 case    */ 
+        %nou5varn;
+      %else %if &type=11 %then                /*     NOU6 case    */ 
+        %nou6varn;
+      %else %if &type=12 %then                /*     NOU7 case    */ 
+        %nou7varn;
+    %end;  
+   
+    %if &msr>0 %then %do;                     /*  measurement error */                          
+      do j=1 to _n[i];
+        E[j,j] = E[j,j] + theta1[&dim];
+      end;
+    %end;
+
+    %if &nzs>0 %then %do; 
+      Zi = Z[m1[i]: m2[i],];
+      E = E + Zi * D * (Zi)`;             /*  add  Zi*D*(Zi)` to D  */
+    %end;        
+
+    temp = inv(E);
+    WM[vstart[i]:vend[i]] = formvec(temp);                  /*  Save W in a vector   */
+     
+    lik1 = lik1 - log(det(E));
+
+    Xi = X[m1[i]: m2[i], ];
+    Yi = Y[m1[i]: m2[i]];
+    WYi = temp * Yi;
+    WY[m1[i]: m2[i]] = WYi;
+    C = C + (Xi)` * temp * Xi;
+    XWY = XWY + (Xi)` * WYi;
+   
+  end;
+
+  Cinv = inv(C);
+
+  beta1 = Cinv * XWY;
+
+  PY = j(n,1,0);
+
+  do i=1 to m;
+     W = formmat(WM[vstart[i]:vend[i]]);
+     Xi = X[m1[i]: m2[i], ];
+     PY[m1[i]: m2[i]] = W * Xi * beta1;
+  end;  
+
+  PY = WY - PY;
+
+  lik1 = (lik1 - log(det(C)) - (Y)`*PY + const)/2;
+
+%mend findlik1;
+
+
+
+   /*  Calculate pen-loglikelihood  at theta1 (free of beta) */
+
+%macro findlik2;
+
+  HWY = j(dimb, 1, 0);                /* HWY = H` * W * Y           */
+  WY = j(n,1,0);
+  C = j(dimb, dimb, 0);               /* Initialize the coef matrix */
+
+  %if &nzs>0 %then %do;
+    if &lam=0 then
+      D = formmat(theta1[2:&q]);
+    else 
+      D = formmat(theta1[1:&q]);
+  %end;  
+
+  lik1=0;
+
+  do i=1 to m;   
+    E = j(_n[i], _n[i], 0);
+
+    %if &prs>0 %then %do;      
+      %if &type=1 %then                       /*     AR case      */ 
+        %arvarn; 
+      %else %if &type=2 %then                 /*     OU case      */  
+        %ouvarn;
+      %else %if &type=3 %then                 /*     NOU1 case    */ 
+        %nou1varn;
+      %else %if &type=4 %then                 /*     NOU2 case    */ 
+        %nou2varn;
+      %else %if &type=5 %then                 /*     NOU3 case    */ 
+        %nou3varn;
+      %else %if &type=6 %then                 /*     IOU case     */
+        %iouvarn;
+      %else %if &type=7 %then                 /*     Wiener case  */
+        %wvarn;
+      %else %if &type=8 %then                 /*     IW case      */
+        %iwvarn;
+      %else %if &type=9 %then                 /*     NOU4 case    */ 
+        %nou4varn;
+      %else %if &type=10 %then                /*     NOU5 case    */ 
+        %nou5varn;
+      %else %if &type=11 %then                /*     NOU6 case    */ 
+        %nou6varn;
+      %else %if &type=12 %then                /*     NOU7 case    */ 
+        %nou7varn;
+    %end;  
+   
+    %if &msr>0 %then %do;                     /*  measurement error */                          
+      do j=1 to _n[i];
+        E[j,j] = E[j,j] + theta1[&dim];
+      end;
+    %end;
+
+    %if &nzs>0 %then %do; 
+      Zi = Z[m1[i]: m2[i],];
+      E = E + Zi * D * (Zi)`;             /*  add  Zi*D*(Zi)` to D  */
+    %end;        
+
+    temp = inv(E);
+    WM[vstart[i]:vend[i]] = formvec(temp);                  /*  Save W in a vector   */
+    
+    lik1 = lik1 - log(det(E));
+
+    Hi = X[m1[i]: m2[i], ] || NB(i);
+    Yi = Y[m1[i]: m2[i]];
+    WYi = temp * Yi;
+    WY[m1[i]: m2[i]] = WYi;
+    C = C + (Hi)` * temp * Hi;
+    HWY = HWY + (Hi)` * WYi;
+   
+  end;
+
+  %if &lam=0 %then %do;
+    tau = theta1[1];
+  %end;
+  %else %do; 
+    tau = &smooth;
+  %end;
+
+  C0 = C;                            /*   C0 = H` * W * H    */
+  temp = 1/tau;
+  do i=0 to r-1;
+    k = np + i;
+    C[k, k] = C[k, k] +  temp;
+  end;
+
+  Cinv = inv(C);
+
+  beta1 = Cinv * HWY;
+
+  PY = j(n,1,0);
+
+  do i=1 to m;
+     W = formmat(WM[vstart[i]:vend[i]]);
+     Hi = X[m1[i]: m2[i], ] || NB(i);
+     PY[m1[i]: m2[i]] = W * Hi * beta1;
+  end;  
+
+  PY = WY - PY;
+
+  lik1 = (lik1 - log(det(C)) - r*log(tau) - (Y)`*PY + const)/2;
+
+%mend findlik2;
+
+
+
+  /* Macro Initial Initializes theta from input or automatically  */
+
+%macro Initial;
+
+  /*  D = the variance matrix for the random effects  */
+
+%if &useold=0 %then %do;  
+  %if &nzs>0 %then %do;
+    D = j(&nzs, &nzs, 0);
+  %end; 
+  
+  %if &dim=&nps %then %do;
+    %do i=1 %to &dim;
+       theta1[&i] = %scan(&parm, &i, %str( ));
+    %end;
+   
+    %findcrt2;
+
+    if crit2=0 then do; 
+       %AutoInit; 
+    end;
+
+  %end;
+  %else %do;    
+    %AutoInit;
+  %end;
+%end;
+%else %do;
+  %if &smth=1 and &lam=0 %then %do;
+    if first=1 then do;
+      temp=theta1;
+      theta1=j(&dim, 1, 0);
+      theta1=temp[2:(&dim+1)];
+    end;
+  %end;
+%end; 
+
+%mend Initial;
+
+
+%macro prog0;
+
+  %let reml=0;
+
+  iternum = 1;  
+
+  %Initial;      /*  We have theta1 here              */
+
+  %findlik0;     /*  Then we have beta1 and lik1      */
+
+  beta0 = beta1;
+  theta0 = theta1;
+  lik0 = lik1;
+
+  %if &print^=N %then %do;
+    likelihd = j(51, 1, 0);
+    objectiv = j(51, 1, 0);
+    likelihd[1] = lik1;
+    objectiv[1] = .;
+  %end; 
+
+  %findpar0;     /* Update theta -> theta1            */
+ 
+  %findcrt2;     /* Check if theta1 is in parm space  */
+
+  do while (crit2=0);
+    theta1 = (theta0 + theta1)/2;
+
+    %findcrt2;
+  end;
+
+  %findlik0; 
+
+  crit1 = abs(lik1 - lik0)/abs(lik1);  
+
+   /*  Check if the likelihood is increasing  */ 
+   
+  do while (lik1 <= lik0 & crit1 > &conv);  
+    theta1 = (theta0 + theta1)/2;
+
+    %findlik0;
+
+    crit1 = abs(lik1 - lik0)/abs(lik1);
+  end;
+
+  %if &print^=N %then %do;
+    likelihd[2] = lik1;
+    objectiv[2] = crit1;
+  %end; 
+
+  do while (crit1 > &conv & iternum < &maxiter);
+
+    iternum = iternum + 1;
+
+    beta0 = beta1;
+    theta0 = theta1; 
+    lik0 = lik1; 
+ 
+    %findpar0;
+
+    %findcrt2; 
+
+    /* Check if the ests are in the parm space  */
+
+    do while (crit2=0);
+      theta1 = (theta0 + theta1)/2;
+ 
+      %findcrt2;
+    end;
+
+    %findlik0;
+
+    crit1 = abs(lik1 - lik0)/abs(lik1);  
+
+     /*  Check if the likelihood is increasing  */ 
+   
+    do while (lik1 <= lik0 & crit1 > &conv);  
+
+      theta1 = (theta0 + theta1)/2;
+
+      %findlik0;
+
+      crit1 = abs(lik1 - lik0)/abs(lik1); 
+    end; 
+
+    %if &print^=N %then %do;
+      likelihd[iternum+1] = lik1;
+      objectiv[iternum+1] = crit1;
+    %end;
+
+  end;  
+
+  %if &print^=N %then %do;
+    temp = likelihd[1:(iternum+1)];
+    likelihd = temp;
+    temp = objectiv[1:(iternum+1)];
+    objectiv = temp;
+    temp = (0:iternum)`;
+    iternum = temp;
+  %end; 
+
+  %let reml=1;
+
+%mend prog0;
+
+%macro prog1;
+
+  iternum = 1;  
+
+  %Initial;      /*  We have theta1 here              */
+
+  %findlik1;     /*  Then we have beta1 and lik1      */
+
+  beta0 = beta1;
+  theta0 = theta1;
+  lik0 = lik1; 
+
+  %if &print^=N %then %do;
+    likelihd = j(51, 1, 0);
+    objectiv = j(51, 1, 0);
+    likelihd[1] = lik1;
+    objectiv[1] = .;
+  %end;
+
+  %findpar1;     /* Update theta -> theta1            */
+ 
+  %findcrt2;     /* Check if theta1 is in parm space  */
+
+  do while (crit2=0);
+    theta1 = (theta0 + theta1)/2;
+
+    %findcrt2;
+  end;
+
+  %findlik1;
+
+  crit1 = abs(lik1 - lik0)/abs(lik1);  
+
+   /*  Check if the likelihood is increasing  */ 
+   
+  do while (lik1 <= lik0 & crit1 > &conv);  
+    theta1 = (theta0 + theta1)/2;
+
+    %findlik1;
+
+    crit1 = abs(lik1 - lik0)/abs(lik1);
+  end;
+
+  %if &print^=N %then %do;
+    likelihd[2] = lik1;
+    objectiv[2] = crit1;
+  %end; 
+
+  do while (crit1 > &conv & iternum < &maxiter);
+
+    iternum = iternum + 1;
+
+    beta0 = beta1;
+    theta0 = theta1; 
+    lik0 = lik1; 
+ 
+    %findpar1;
+
+    %findcrt2; 
+    
+    /* Check if the ests are in the parm space  */
+
+    do while (crit2=0);
+      theta1 = (theta0 + theta1)/2;
+ 
+      %findcrt2;
+    end;
+
+    %findlik1;
+
+    crit1 = abs(lik1 - lik0)/abs(lik1);  
+
+     /*  Check if the likelihood is increasing  */ 
+   
+    do while (lik1 <= lik0 & crit1 > &conv);  
+
+      theta1 = (theta0 + theta1)/2;
+
+      %findlik1;
+
+      crit1 = abs(lik1 - lik0)/abs(lik1); 
+    end; 
+
+    %if &print^=N %then %do;
+      likelihd[iternum+1] = lik1;
+      objectiv[iternum+1] = crit1;
+    %end;
+
+  end;  
+ 
+  %if &print^=N %then %do;
+    temp = likelihd[1:(iternum+1)];
+    likelihd = temp;
+    temp = objectiv[1:(iternum+1)];
+    objectiv = temp;
+    temp = (0:iternum)`;
+    iternum = temp;
+  %end; 
+
+
+      
+   /*  Free some matrices  */
+
+    %do j=1 %to &dim;
+      free F&j;
+    %end;
+    %do i=1 %to &dim;
+      %do j=&i %to &dim;
+        free F&i&j;
+      %end;
+    %end;
+
+%mend prog1;
+
+
+%macro prog2;
+
+  iternum = 1;  
+
+  %Initial;      /*  We have theta1 here              */
+
+  %findlik2;     /*  Then we have beta1 and lik1      */
+
+  beta0 = beta1;
+  theta0 = theta1;
+  lik0 = lik1;
+
+  %if &print^=N %then %do;
+    likelihd = j(51, 1, 0);
+    objectiv = j(51, 1, 0);
+    likelihd[1] = lik1;
+    objectiv[1] = .;
+  %end;
+
+  %findpar2;     /* Update theta -> theta1            */
+ 
+  %findcrt2;     /* Check if theta1 is in parm space  */
+
+  do while (crit2=0);
+    theta1 = (theta0 + theta1)/2;
+    %findcrt2;
+  end;
+
+  %findlik2;
+
+  crit1 = abs(lik1 - lik0)/abs(lik1);  
+
+   /*  Check if the likelihood is increasing  */ 
+   
+  do while (lik1 <= lik0 & crit1 > &conv);  
+    theta1 = (theta0 + theta1)/2;
+
+    %findlik2;
+
+    crit1 = abs(lik1 - lik0)/abs(lik1);
+  end;
+
+  %if &print^=N %then %do;
+    likelihd[2] = lik1;
+    objectiv[2] = crit1;
+  %end;
+
+  do while (crit1 > &conv & iternum < &maxiter);
+
+    iternum = iternum + 1;
+
+    beta0 = beta1;
+    theta0 = theta1; 
+    lik0 = lik1; 
+ 
+    %findpar2;
+
+    %findcrt2; 
+    
+    /* Check if the ests are in the parm space  */
+
+    do while (crit2=0);
+      theta1 = (theta0 + theta1)/2;
+ 
+      %findcrt2;
+    end;
+
+    %findlik2;
+
+    crit1 = abs(lik1 - lik0)/abs(lik1);  
+
+     /*  Check if the likelihood is increasing  */ 
+
+    do while (lik1 <= lik0 & crit1 > &conv);  
+
+      theta1 = (theta0 + theta1)/2;
+
+      %findlik2;
+
+      crit1 = abs(lik1 - lik0)/abs(lik1); 
+    end; 
+
+    %if &print^=N %then %do;
+      likelihd[iternum+1] = lik1;
+      objectiv[iternum+1] = crit1;
+    %end; 
+
+  end;  
+ 
+  %if &print^=N %then %do;
+    temp = likelihd[1:(iternum+1)];
+    likelihd = temp;
+    temp = objectiv[1:(iternum+1)];
+    objectiv = temp;
+    temp = (0:iternum)`;
+    iternum = temp;
+  %end; 
+
+
+      
+   /*  Free some matrices  */
+
+    %do j=2 %to &dim;
+      free F1&j;
+    %end;
+    %do i=2 %to &dim;
+      %do j=&i %to &dim;
+        free F&i&j;
+      %end;
+    %end;
+
+%mend prog2;
+
+
+%macro prog3;
+
+  iternum = 1;  
+
+  %Initial;      /*  We have theta1 here              */
+
+  %findlik2;     /*  Then we have beta1 and lik1      */
+
+  beta0 = beta1;  
+  theta0 = theta1;
+  lik0 = lik1;     
+
+  %if &print^=N %then %do;
+    likelihd = j(51, 1, 0);
+    objectiv = j(51, 1, 0);
+    likelihd[1] = lik1;
+    objectiv[1] = .;
+  %end;
+
+  %findpar3;     /* Update theta -> theta1            */
+ 
+  %findcrt2;     /* Check if theta1 is in parm space  */
+
+  do while (crit2=0);
+    theta1 = (theta0 + theta1)/2;
+    %findcrt2;
+  end;
+
+  %findlik2;
+
+  crit1 = abs(lik1 - lik0)/abs(lik1);  
+
+   /*  Check if the likelihood is increasing  */ 
+   
+  do while (lik1 <= lik0 & crit1 > &conv);  
+    theta1 = (theta0 + theta1)/2;
+
+    %findlik2;
+
+    crit1 = abs(lik1 - lik0)/abs(lik1);
+  end;
+
+  %if &print^=N %then %do;
+    likelihd[2] = lik1;
+    objectiv[2] = crit1;
+  %end;
+
+  do while (crit1 > &conv & iternum < &maxiter);
+
+    iternum = iternum + 1;
+
+    beta0 = beta1;
+    theta0 = theta1; 
+    lik0 = lik1; 
+ 
+    %findpar3;
+
+    %findcrt2; 
+    
+    /* Check if the ests are in the parm space  */
+
+    do while (crit2=0);
+      theta1 = (theta0 + theta1)/2;
+ 
+      %findcrt2;
+    end;
+
+    %findlik2;
+
+    crit1 = abs(lik1 - lik0)/abs(lik1);  
+
+     /*  Check if the likelihood is increasing  */ 
+
+    do while (lik1 <= lik0 & crit1 > &conv);  
+
+      theta1 = (theta0 + theta1)/2;
+
+      %findlik2;
+
+      crit1 = abs(lik1 - lik0)/abs(lik1); 
+    end; 
+
+    %if &print^=N %then %do;
+      likelihd[iternum+1] = lik1;
+      objectiv[iternum+1] = crit1;
+    %end; 
+
+  end;  
+ 
+  %if &print^=N %then %do;
+    temp = likelihd[1:(iternum+1)];
+    likelihd = temp;
+    temp = objectiv[1:(iternum+1)];
+    objectiv = temp;
+    temp = (0:iternum)`;
+    iternum = temp;
+  %end; 
+
+
+      
+   /*  Free some matrices  */
+
+    %do j=1 %to &dim;
+      free F&j;
+    %end;
+    %do i=1 %to &dim;
+      %do j=&i %to &dim;
+        free F&i&j;
+      %end;
+    %end;
+
+%mend prog3;
+
+
+   /***********************************************/
+   /*                                             */
+   /*   Macro OUTINFO outputs the iteration       */
+   /*  history and variance components            */
+   /*                                             */
+   /***********************************************/
+
+%macro outinfo;
+
+  print, "Macro: SPMM -- Semi-Parametric Mixed Models"; 
+  print "(c) Daowen Zhang, North Carolina State University";
+  
+  print, "Iteration History" ;
+  print iternum likelihd objectiv;
+
+  %if &smth=1 %then %do;
+    descript = lik1 // m // n // numknot;
+    rname={"REML Log Likelihood" "Number of Subjects" 
+           "Number of Observations" "Number of Knots"};
+  %end;
+  %else %if &method=ML %then %do;
+    descript = lik1 // m // n;
+    rname={"Log Likelihood" "Number of Subjects" "Number of Observations"};
+  %end;
+  %else %do;
+    descript = lik1 // m // n;
+    rname={"REML Log Likelihood" "Number of Subjects" "Number of Observations"};
+  %end;
+
+  cname={"VALUE"};  
+  print, "Model Fitting Information for &dep",,
+          descript [rowname=rname colname=cname];
+
+  %if &nzs>0 %then %do;
+    rname={
+      %do i=1 %to &nzs;
+        %let temp="%upcase(%scan(&zvars, &i))"&_space; &temp
+      %end;};
+    cname=rname;
+    print,, 'Covariance Matrix for Random Effects',,
+            D [rowname=rname colname=cname];
+  %end;
+
+%mend outinfo;
+
+
+   /***********************************************/
+   /*                                             */
+   /*   Macro OUTVARN outputs the estimates       */
+   /*  and se of the smmothing and variance       */
+   /*  components                                 */
+   /*                                             */
+   /***********************************************/
+
+%macro outvarn;
+
+ _se = sqrt(vecdiag(Finv)); 
+
+  chisq =  (theta1 / _se)##2;  
+
+  p_value = 1 - probchi(chisq, 1);
+
+  var_se = theta1 || _se || chisq || p_value;
+
+  cov_parm = {%if &smth=1 and &lam=0 %then %str(Smooth); 
+    %if &nzs>0 %then 
+    %do i=1 %to &nzs;
+      %do j=1 %to &i;
+        "D(&i,&j)"&_space
+      %end;        
+    %end;
+    %if &prs>0 %then %do;
+      %if &type=1 %then %do;
+        "AR"&_space "Diag"&_space %end;
+      %else %if &type=2 %then %do;
+         "Rho"&_space "Diag"&_space %end;
+      %else %if &type=3 %then %do;
+         "Rho"&_space "A0"&_space "A1"&_space %end;
+      %else %if &type=4 %then %do;
+         "Rho"&_space "Alpha"&_space "A0"&_space "A1"&_space %end;
+      %else %if &type=5 %then %do;
+         "Rho"&_space "A0"&_space "A1"&_space "A2"&_space %end;
+      %else %if &type=6 %then %do;
+         "Alpha"&_space "Sigma^2"&_space %end;
+      %else %if &type=7 %then %do;
+         "Sigma^2"&_space %end;
+      %else %if &type=8 %then %do;
+         "Sigma^2"&_space %end; 
+      %else %if &type=9 %then %do;
+         "Rho"&_space "A0"&_space "A1"&_space "A2"&_space %end;
+      %else %if &type=10 %then %do;
+         "Rho"&_space "A0"&_space "A1"&_space "A2"&_space %end; 
+      %else %if &type=11 %then %do;
+         "Rho"&_space "A0"&_space "A1"&_space %end;  
+      %else %if &type=12 %then %do;
+         "Rho"&_space "A0"&_space "A1"&_space "A2"&_space %end;    
+    %end;
+    %if &msr>0 %then %str("Residual");}; 
+
+  col = {"Estimate"  "Se"  "Chisq"  "P_value"};
+
+  %if &print^=N %then %do;
+    create var_se from var_se[rowname=cov_parm colname=col];
+    append from var_se[rowname=cov_parm];
+  %end; 
+             
+  %if %length(&outvar)>0 %then %do;
+    _var = (theta1)`;
+    create &outvar from _var[colname=cov_parm];
+    append from _var;
+  %end;
+
+  %if %length(&outvstd)>0 %then %do;
+    _std = (_se)`;
+    create &outvstd from _std[colname=cov_parm];
+    append from _std;
+  %end;       
+
+%mend outvarn;
+
+
+   /***********************************************/
+   /*                                             */
+   /*   Macro OUTPARM outputs the estimates       */
+   /*  and se of the parameters in the            */
+   /*  parametric part                            */
+   /*                                             */
+   /***********************************************/
+
+%macro outparm;
+
+  %if &nxs>0 %then %do; 
+    %if &smth=0 %then %do;
+      beta = beta1;
+      Vbeta = Cinv;
+      _se = sqrt(vecdiag(Vbeta));
+      chisq = (beta / _se)##2;
+      p_value = 1 - probchi(chisq, 1);
+      beta_se = beta || _se || chisq || p_value;
+
+      xnames = {"INTERCEPT" 
+      %do i=1 %to &nxs;
+        %let temp="%upcase(%scan(&xvars, &i))"&_space; &temp
+      %end;};
+
+      col = {"beta"  "se"  "chisq"  "p_value"}; 
+
+      %if &prnfix=S %then %do;
+        create beta_se from beta_se[rowname=xnames colname=col];
+        append from beta_se[rowname=xnames];
+      %end;
+
+      %if %length(&outbeta)>0 %then %do;
+        _beta = (beta)`;
+        create &outbeta from _beta[colname=xnames];
+        append from _beta;
+      %end; 
+
+      %if %length(&outbstd)>0 %then %do;
+        _std = (_se)`;
+        create &outbstd from _std[colname=xnames];
+        append from _std;
+      %end;  
+    %end;
+    %else %do;
+      beta = beta1[1:&nxs];
+      Vbeta = MM2[1:&nxs, 1:&nxs];
+      F_se = sqrt(vecdiag(Vbeta));  /* naive freq stderr */
+      F_chisq = (beta / F_se)##2; 
+      F_p = 1 - probchi(F_chisq, 1);  /* p value based on naive se */
+      temp=MM1[1:&nxs, np:dimb];
+      Vbeta = Vbeta + temp*(temp)` * tau;
+      B_se = sqrt(vecdiag(Vbeta));  /* Bayesian type se  */
+      B_chisq = (beta / B_se)##2; 
+      B_p = 1 - probchi(B_chisq, 1);  /* p value based on Bayse se */
+
+      beta_se = beta || F_se || F_chisq || F_p || B_se || B_chisq || B_p;
+  
+      xnames = {%do i=1 %to &nxs;
+        %let temp="%upcase(%scan(&xvars, &i))"&_space; &temp
+      %end;};
+
+      col = {"beta"  "F_se"  "F_chisq"  "F_p" "B_se" "B_chisq" "B_p"};
+
+      %if &prnfix=S %then %do;
+        create beta_se from beta_se[rowname=xnames colname=col];
+        append from beta_se[rowname=xnames];
+      %end;
+
+      %if %length(&outbeta)>0 %then %do;
+        _beta = (beta)`;
+        create &outbeta from _beta[colname=xnames];
+        append from _beta;
+      %end; 
+  
+      %if %length(&outbstd)>0 %then %do;
+        type={"Freq" "Bays"};
+        _std = (F_se)` // (B_se)`;
+        create &outbstd from _std[rowname=type colname=xnames];
+        append from _std[rowname=type];
+      %end;     
+
+    %end;
+  %end;
+
+%mend outparm;
+
+
+   /***********************************************/
+   /*                                             */
+   /*   Macro OUTRAND outputs the estimates       */
+   /*  and se of the random effects               */
+   /*                                             */
+   /***********************************************/
+
+%macro outrand;
+
+  %if &nzs>0 %then %do;
+
+    subject = j(&m*&nzs, 1, 0);
+    do i=1 to &m;
+      do j=1 to &nzs;
+        subject[&nzs*(i-1)+j] = id[i];
+      end;
+    end;
+    
+    ran = subject;
+    
+    %if &smth=0 %then %do;
+      ranstd = ran;
+      ranvar = j(&m*&nzs, &nzs, 0);
+
+      do i=1 to m;
+        Zi = Z[m1[i]: m2[i],];      
+        Hi = X[m1[i]: m2[i],];
+        PYi = PY[m1[i]: m2[i]];
+        temp1 = D * (Zi)`;
+        W = formmat(WM[vstart[i]:vend[i]]);
+        WHi = W*Hi;
+        ran[(&nzs*(i-1)+1):(&nzs*i)] = temp1 * PYi;
+
+        ranvar[(&nzs*(i-1)+1):(&nzs*i),] = D - temp1 * (W - WHi 
+          * Cinv * (WHi)`) * (temp1)`;
+        ranstd[(&nzs*(i-1)+1):(&nzs*i)] = 
+          sqrt(vecdiag(ranvar[(&nzs*(i-1)+1):(&nzs*i),]));
+      end;
+
+      chisq = (ran / ranstd)##2; 
+      p_value = 1 - probchi(chisq, 1);
+      ran_se = subject || ran || ranstd || chisq || p_value; 
+  
+      Parm = {
+        %do k=1 %to &m;
+          %do i=1 %to &nzs;
+          %let temp="%upcase(%scan(&zvars, &i))"&_space; &temp
+        %end; %end;};
+
+      col = {"Subject"  "Estimate"  "se"  "chisq"  "p_value"};
+      %if &prnran=S %then %do;      
+        create ran_std from ran_se[rowname=parm colname=col];
+        append from ran_se[rowname=parm]; 
+      %end;
+
+      %if %length(&outran_F)>0 %then %do;
+        col = {"Subject" "Estimate"
+          %do i=1 %to &nzs;
+            %let temp="%upcase(%scan(&zvars, &i))"&_space; &temp
+          %end;};
+        ran_se = subject || ran || ranvar;
+        create &outran_F from ran_se[rowname=parm colname=col];
+        append from ran_se[rowname=parm];
+      %end;
+
+    %end;
+    %else %do;
+      F_ranstd = j(&m*&nzs, 1, 0);
+      F_ranvar = j(&m*&nzs, &nzs, 0);
+      B_ranstd = j(&m*&nzs, 1, 0);
+      B_ranvar = j(&m*&nzs, &nzs, 0);
+
+      do i=1 to m; 
+        Zi = Z[m1[i]: m2[i],]; 
+        Hi = X[m1[i]: m2[i],] || NB(i);
+        PYi = PY[m1[i]: m2[i]];
+        temp1 = D * (Zi)`;
+        W = formmat(WM[vstart[i]:vend[i]]);
+        WHi = W*Hi;
+        ran[(&nzs*(i-1)+1):(&nzs*i)] = temp1 * PYi;
+
+        F_ranvar[(&nzs*(i-1)+1):(&nzs*i),] = D - temp1 * (W - WHi 
+          * MM2 * (WHi)`) * (temp1)`;
+        WH2i = WHi[, np: dimb];
+        temp2 = WHi * MM1[, np: dimb];
+        temp3 = temp2 * (WH2i)`;
+        temp = temp1 * ( WH2i * (WH2i)` -  temp3 - (temp3)`
+          + temp2 * (temp2)`) * (temp1)` * tau;
+        B_ranvar[(&nzs*(i-1)+1):(&nzs*i),] = 
+          F_ranvar[(&nzs*(i-1)+1):(&nzs*i),] + temp;   
+        F_ranstd[(&nzs*(i-1)+1):(&nzs*i)] = 
+          sqrt(vecdiag(F_ranvar[(&nzs*(i-1)+1):(&nzs*i),]));
+        B_ranstd[(&nzs*(i-1)+1):(&nzs*i)] = 
+          sqrt(vecdiag(B_ranvar[(&nzs*(i-1)+1):(&nzs*i),])); 
+      end;
+
+      F_chisq = (ran / F_ranstd)##2; 
+      F_p = 1 - probchi(F_chisq, 1);     
+      B_chisq = (ran / B_ranstd)##2; 
+      B_p = 1 - probchi(B_chisq, 1);
+
+      ran_se = subject || ran || F_ranstd || F_chisq || F_p ||
+               B_ranstd || B_chisq || B_p;   
+      Parm = {
+        %do k=1 %to &m;
+          %do i=1 %to &nzs;
+          %let temp="%upcase(%scan(&zvars, &i))"&_space; &temp
+        %end; %end;};
+
+      col = {"Subject"  "Estimate"  "F_se"  "F_chisq"  "F_p"
+               "B_se"  "B_chisq"  "B_p"};
+
+      %if &prnran=S %then %do;      
+        create ran_std from ran_se[rowname=parm colname=col];
+        append from ran_se[rowname=parm]; 
+      %end;
+
+      %if %length(&outran_F)>0 %then %do;
+        col = {"Subject" "Estimate"
+          %do i=1 %to &nzs;
+            %let temp="%upcase(%scan(&zvars, &i))"&_space; &temp
+          %end;};
+        ran_se = subject || ran || F_ranvar;
+        create &outran_F from ran_se[rowname=parm colname=col];
+        append from ran_se[rowname=parm];
+      %end;
+
+      %if %length(&outran_B)>0 %then %do;
+        col = {"Subject" "Estimate"
+          %do i=1 %to &nzs;
+            %let temp="%upcase(%scan(&zvars, &i))"&_space; &temp
+          %end;};
+        ran_se = subject || ran || B_ranvar;
+        create &outran_B from ran_se[rowname=parm colname=col];
+        append from ran_se[rowname=parm];
+      %end;
+
+    %end;
+
+  %end;
+    
+%mend outrand;
+
+
+   /***********************************************/
+   /*                                             */
+   /*   Macro OUTPROCS outputs the estimates      */
+   /*  and se of the Gaussian process             */
+   /*                                             */
+   /***********************************************/
+
+%macro outprocs;
+
+  process = j(n,1,0);
+  %if &smth=0 %then %do;
+    _se = j(n,1,0);
+  %end;
+  %else %do;
+    F_se = j(n, 1, 0);
+    B_se = j(n, 1, 0);
+  %end;
+ 
+  do i=1 to m;   
+    E = j(_n[i], _n[i], 0);
+
+    %if &prs>0 %then %do; 
+      %if &type=1 %then                  /*     AR case      */ 
+        %arvarn;
+      %else %if &type=2 %then            /*     OU case      */  
+        %ouvarn;
+      %else %if &type=3 %then            /*     NOU1 case    */ 
+        %nou1varn;
+      %else %if &type=4 %then            /*     NOU2 case    */ 
+        %nou2varn;
+      %else %if &type=5 %then            /*     NOU3 case    */ 
+        %nou3varn;
+      %else %if &type=6 %then            /*     IOU case     */
+        %iouvarn;
+      %else %if &type=7 %then            /*     Wiener case  */
+        %wvarn;
+      %else %if &type=8 %then            /*     IW case      */
+        %iwvarn; 
+      %else %if &type=9 %then            /*     NOU4 case    */ 
+        %nou4varn;
+      %else %if &type=10 %then           /*     NOU5 case    */ 
+        %nou5varn;
+      %else %if &type=11 %then           /*     NOU6 case    */ 
+        %nou6varn;
+      %else %if &type=12 %then           /*     NOU7 case    */ 
+        %nou7varn;
+       
+    %end;  
+    
+    process[m1[i]: m2[i]] = E * PY[m1[i]: m2[i]];
+    W = formmat(WM[vstart[i]:vend[i]]);
+
+    %if &smth=0 %then %do;
+      WHi = W * X[m1[i]: m2[i],];
+      varn = E - E * ( W  -  WHi * Cinv * (WHi)`) * E;
+      _se[m1[i]: m2[i]] = sqrt(vecdiag(varn));
+    %end;
+    %else %do;
+      Hi = X [m1[i]: m2[i],] || NB(i);
+      WHi = W * Hi;
+      F_varn = E - E * (W  -  WHi * MM2 * (WHi)`) * E;
+      WH2i = WHi[, np: dimb];
+      temp2 = WHi * MM1[, np: dimb];
+      temp3 = temp2 * (WH2i)`;
+      temp = E * ( WH2i * (WH2i)` -  temp3 - (temp3)`
+        + temp2 * (temp2)`) * E * tau;
+      B_varn = F_varn + temp;
+      F_se[m1[i]: m2[i]] = sqrt(vecdiag(F_varn));
+      B_se[m1[i]: m2[i]] = sqrt(vecdiag(B_varn));
+    %end;
+  end;
+
+  %if &smth=0 %then %do;
+    chisq = (process / _se)##2;
+    p_value = 1 - probchi(chisq, 1);         
+    prs_se = _id || process || _se || chisq || p_value;
+    col = {"Subject"  "Process"  "Se"  "Chisq"  "P_value"};
+    create &outprs from prs_se[colname=col];
+    append from prs_se;
+  %end;
+  %else %do;
+    F_chisq = (process / F_se)##2;
+    F_p = 1 - probchi(F_chisq, 1);      
+    B_chisq = (process / B_se)##2;
+    B_p = 1 - probchi(B_chisq, 1);
+    prs_se = _id || process || F_se || F_chisq || F_p || 
+      B_se || B_chisq || B_p;
+    col = {"Subject"  "Process"  "F_Se"  "F_Chisq"  "F_P"
+           "B_Se"  "B_Chisq"  "B_P" };
+    create &outprs from prs_se[colname=col];
+    append from prs_se;    
+  %end;    
+ 
+%mend outprocs;
+
+   /***********************************************/
+   /*                                             */
+   /*   Macro OUTPUTF outputs the estimates,      */
+   /*  band and variance of the estimated f(.)    */
+   /*                                             */
+   /***********************************************/
+
+%macro outputf;
+
+  %if %length(&outsmth)>0 or %length(&outband)>0 %then %do;
+  
+  delta = beta1[(&nxs+1):(&nxs+2)];
+  a = beta1[np:dimb];
+
+  f = T*delta + B*a;
+
+  %if %length(&outband)>0 %then %do; 
+    TB = T || B;
+
+    /* find frequentist variance */
+    k = &nxs+1;
+    varf = TB * MM2[k:dimb, k:dimb] * (TB)`;
+    F_var = vecdiag(varf);
+    F_se = sqrt(F_var);
+    temp = 1.959964*F_se;
+    F_U95 = f + temp;
+    F_L95 = f - temp;
+
+    /* find Bayesian variance */
+    varf = TB * Cinv[k:dimb, k:dimb] * TB`;
+    B_var = vecdiag(varf);
+    B_se = sqrt(B_var);
+    temp = 1.959964*B_se;
+    B_U95 = f + temp;
+    B_L95 = f - temp;
+    band = _knot || f || F_se || F_L95 || F_U95 || B_se || B_L95 || B_U95;
+ 
+    cname = {"&smthvar" "&dep" "F_Se" "F_L95" "F_U95" "B_Se" "B_L95" "B_U95"};
+    create &outband from band[colname=cname];
+    append from band;   
+  %end;
+
+  %if %length(&outsmth)>0 %then %do;
+  _z=q1#f[1:r] + q2#f[2:r+1] + q3#f[3:r+2];
+  _x=j(r,1,0);
+ 
+
+  /* Solve L(_x)=_z  */
+  _x[1]=_z[1];
+  do i=2 to r;
+    _x[i]=_z[i]-lr[i-1]#_x[i-1];
+  end;
+
+  _z=_x/dr;
+
+  /* Solve L^T(_x)=_z  */
+  _x[r]=_z[r];
+  do i=1 to r-1;
+    _x[r-i]=_z[r-i]-_x[r-i+1]#lr[r-i];
+  end;
+  
+  gamma=j(numknot, 1, 0);
+  gamma[2:r+1]=_x;
+
+  temp = _knot[numknot] - _knot[1];
+  _x = j(203, 1, 0);
+  spline  = j(203, 1, 0);
+
+  _x[1] = _knot[1] - temp*0.05;
+  _x[2:202] = _knot[1] + temp#(0:200)`/200;
+  _x[203] = _knot[numknot] + temp*0.05;  
+
+  f1prime = (f[2]-f[1])/(_knot[2]-_knot[1]) - (_knot[2]-_knot[1])*gamma[2]/6;
+  spline[1] = f[1] - (_knot[1]-_x[1])*f1prime;
+  spline[2] = f[1];
+
+  i = 3;
+  j = 1;
+  do while (j<numknot);
+    temp = _knot[j+1] - _knot[j];
+    do while (_x[i] <= _knot[j+1]);
+      temp1 = _x[i] - _knot[j];
+      temp2 = _knot[j+1] - _x[i];
+      spline[i] = (temp1*f[j+1]+temp2*f[j])/temp     
+        -temp1*temp2*((1+temp1/temp)*gamma[j+1]+(1+temp2/temp)*gamma[j])/6;
+      i = i + 1;
+    end;
+    j = j + 1;
+  end;
+
+  spline[202] = f[numknot];
+  fnprime = (f[numknot] - f[numknot-1])/(_knot[numknot]-_knot[numknot-1])
+            +(_knot[numknot]-_knot[numknot-1])*gamma[numknot-1]/6; 
+  spline[203] = f[numknot] + (_x[203]-_knot[numknot])*fnprime;
+
+  out = _x || spline;
+  create &outsmth from out[colname={"&smthvar" "&dep"}];
+  append from out;
+  %end;  
+  
+  %end;
+
+%mend outputf;
+
+
+   /***********************************************/
+   /*                                             */
+   /*   Macro UNCSCORE finds the uncorrected      */
+   /*  score statistics for score test assuming   */
+   /*  ML version of the mixed model was run      */
+   /*                                             */
+   /***********************************************/
+                                        
+%macro uncscore;
+
+  %let callin=1;
+  
+  Itg = j(&dim, 1, 0);                /*  Itg = I tao gamma      */
+
+  H2WH2 = j(r, r, 0);                 /* H2WH2 = (H2)` * W * H2  */
+  
+  u = B` * NTmat(PY);
+  
+  do i=1 to m;
+    W = formmat(WM[vstart[i]:vend[i]]);
+    H2i = NB(i);
+    WH2 = W * H2i;
+    H2WH2 = H2WH2 + (H2i)` * WH2;
+
+    %if &nzs>0 %then
+      %do j=1 %to &q;
+        a=rowcol(&j);
+        z1 = Z[m1[i]: m2[i], a[1]];
+        z2 = Z[m1[i]: m2[i], a[2]];
+        temp = z1 * (z2)`;
+
+        if a[1] = a[2] then
+          Vd = temp;
+        else
+          Vd = temp + (temp)`;
+
+        temp = (WH2)` * Vd; 
+
+        Itg[&j] = Itg[&j] + trc(temp, WH2);
+      %end;      
+    
+    %if &prs>0 %then %do;
+      %if &type=1 %then 
+        %arderv;
+      %else %if &type=2 %then
+        %ouderv;
+      %else %if &type=3 %then 
+        %nou1derv;
+      %else %if &type=4 %then 
+        %nou2derv;
+      %else %if &type=5 %then 
+        %nou3derv;
+      %else %if &type=6 %then
+        %iouderv;
+      %else %if &type=7 %then
+        %wderv;
+      %else %if &type=8 %then
+        %iwderv;
+      %else %if &type=9 %then 
+        %nou4derv;
+      %else %if &type=10 %then 
+        %nou5derv;
+      %else %if &type=11 %then 
+        %nou6derv;
+      %else %if &type=12 %then 
+        %nou7derv;
+    %end;
+          
+    
+    %if &msr=0 %then
+      %do j=&q1 %to &dim;
+        temp = (WH2)` * V&j;
+        Itg[&j] = Itg[&j] + trc(temp, WH2); 
+      %end;
+    %else %do;
+       %do j = &q1 %to &q2;            
+         temp = (WH2)` * V&j;
+         Itg[&j] = Itg[&j] + trc(temp, WH2); 
+       %end;
+       temp = (WH2)`;
+       Itg[&dim] = Itg[&dim] + trc(temp, WH2);
+    %end;
+
+  end;
+
+  score = u`*u/2;
+
+  mean = trace(H2WH2)/2;
+
+  temp=H2WH2;
+  Info = trc(temp, H2WH2)/2 - (Itg)` * Finv * Itg/4;
+
+  beta =  info / (2*mean);
+  df[1] = mean / beta;
+
+  chisq[1] = score/beta;
+
+  if chisq[1] > 0 then
+    p_value[1] = 1 - probchi(chisq[1], df[1]);
+  else 
+    p_value[1] = 1;
+
+  %let callin=0;
+  
+%mend uncscore;
+
+
+   /***********************************************/
+   /*                                             */
+   /*   Macro CORSCORE finds the corrected        */
+   /*  score statistics for score test assuming   */
+   /*  REML version of the mixed model was run    */
+   /*                                             */
+   /***********************************************/
+
+%macro corscore;
+
+  %let callin=1;
+  
+  Itg = j(&dim, 1, 0);              /*  Itg = I tao gamma     */
+
+  H2WH2 = j(r, r, 0);               /* H2WH2 = (H2)` * W * H2 */
+  
+  XWH2 =  j(dimb, r, 0);
+  %do j=1 %to &dim;
+    F1&j = j(dimb, r, 0);
+    F2&j = j(dimb, dimb, 0);
+  %end;
+  u = B` * NTmat(PY);
+
+  do i=1 to m;
+    W = formmat(WM[vstart[i]:vend[i]]);
+    H2i = NB(i);
+    Xi = X[m1[i]: m2[i], ]; 
+    WH2 = W * H2i;
+    H2WH2 = H2WH2 + (H2i)` * WH2;
+    XWH2 = XWH2 + (Xi)` * WH2;  
+    XW = (Xi)` * W;
+    
+    %if &nzs>0 %then
+      %do j=1 %to &q;
+        a=rowcol(&j);
+        z1 = Z[m1[i]: m2[i], a[1]];
+        z2 = Z[m1[i]: m2[i], a[2]];
+        temp = z1 * (z2)`;
+
+        if a[1] = a[2] then
+          Vd = temp;
+        else
+          Vd = temp + (temp)`;
+
+        temp = (WH2)` * Vd;
+        F1&j = F1&j + XW * (temp)`;
+        F2&j = F2&j + XW * Vd * (XW)`;
+        Itg[&j] = Itg[&j] + trc(temp, WH2);
+      %end;          
+
+    %if &prs>0 %then %do;
+      %if &type=1 %then 
+        %arderv;
+      %else %if &type=2 %then
+        %ouderv;
+      %else %if &type=3 %then 
+        %nou1derv;
+      %else %if &type=4 %then 
+        %nou2derv;
+      %else %if &type=5 %then 
+        %nou3derv;
+      %else %if &type=6 %then
+        %iouderv;
+      %else %if &type=7 %then
+        %wderv;
+      %else %if &type=8 %then
+        %iwderv;
+      %else %if &type=9 %then 
+        %nou4derv;
+      %else %if &type=10 %then 
+        %nou5derv;
+      %else %if &type=11 %then 
+        %nou6derv;
+      %else %if &type=12 %then 
+        %nou7derv;
+    %end;    
+
+    %if &msr=0 %then
+      %do j=&q1 %to &dim;
+        temp = (WH2)` * V&j;
+        F1&j = F1&j + XW * (temp)`;
+        F2&j = F2&j + XW * V&j * (XW)`;
+        Itg[&j] = Itg[&j] + trc(temp, WH2);
+      %end;
+    %else %do;
+      %do j = &q1 %to &q2; 
+        temp = (WH2)` * V&j;
+        F1&j = F1&j + XW * (temp)`;   
+        F2&j = F2&j + XW * V&j * (XW)`;
+        Itg[&j] = Itg[&j] + trc(temp, WH2);
+      %end;
+      F1&dim = F1&dim + XW * WH2; 
+      F2&dim = F2&dim + XW * (XW)`;
+      temp = (WH2)`;
+      Itg[&j] = Itg[&j] + trc(temp, WH2);
+    %end;
+
+  end;    
+
+  temp1 = (XWH2)` * Cinv;
+  temp2 = XWH2 * temp1;
+
+  score = u`*u/2; 
+
+  mean = (trace(H2WH2) - trace(temp2))/2;
+
+  temp = H2WH2;
+  Info = trc(temp, H2WH2);
+  
+  temp = XWH2 * H2WH2;
+  Info = Info - 2*trc(temp, temp1);
+
+  temp = temp2;
+  Info = Info + trc(temp, temp2);
+
+  %do j=1 %to &dim;
+    temp = F2&j * Cinv;
+    Itg[&j] = Itg[&j] - 2*trc(F1&j, temp1) + trc(temp, temp2);
+  %end;
+
+  Info = Info/2 - (Itg)` * Finv * Itg/4;
+
+  beta =  info / (2*mean);
+  df[2] = mean / beta;
+
+  chisq[2] = score/beta;
+
+  if chisq[2] > 0 then 
+    p_value[2] = 1 - probchi(chisq[2], df[2]);
+  else  
+    p_value[2] = 1;
+
+  %let callin=0;
+
+%mend corscore;
+  
+       /***********************************************/
+       /*                                             */
+       /*   Macro testlin tests the linearity of      */
+       /*  of f(.) or the functional form for the     */
+       /*  first variable in X                        */
+       /*                                             */
+       /***********************************************/
+
+%macro testlin;
+
+  version={'Bias-uncorrected', 'Bias-corrected'};
+  chisq = j(2,1,0);
+  df = chisq;
+  p_value = df;
+ 
+  %let useold = 1; 
+
+  %if &smth=0 %then %do;
+     %if &method=ML %then %do;
+        %uncscore;
+        const = (n-dimb)*const/n;
+        %prog1;
+        %corscore; 
+     %end;      
+     %else %do;
+        %corscore;
+        const = n*const/(n-dimb);
+        %prog0;
+        %uncscore;
+     %end;        
+  %end;
+  %else %do;   /* there is t that needs smoothed */
+     %if &lam=0 %then %do;
+       %let dim=%eval(&dim-1);
+       %let q=%eval(&q-1);
+       %let q1=%eval(&q1-1);
+       %let q2=%eval(&q2-1);
+     %end;
+     %let nxs=%eval(&nxs+1);
+     %let test=1;
+     %if &nxs>1 %then %do;
+       X = j(n,1,1) || smthvar || X[, 1:(&nxs-1)]; 
+     %end;
+
+     dimb = &nxs + 1;
+     const = n*const/(n-dimb); 
+     first=1;
+     %prog0;
+     %uncscore;
+     const = (n-dimb)*const/n;
+     first=0;
+     %prog1;
+     %corscore;
+  %end;
+  
+
+  %if &print^=N %then %do;
+    print, "Score test of linearity for covariate &smthvar";
+    print version chisq df p_value[format=6.4];
+  %end;
+
+  %if %length(&outscore)>0 %then %do;
+    version={1,2};
+    scorinfo = version || chisq || df || p_value;
+    cname = {"Version" "Chisq" "df" "P_value"};
+    create &outscore from scorinfo[colname=cname];
+    append from scorinfo;
+  %end;
+   
+%mend testlin;
+
+
+       /***********************************************/
+       /*                                             */
+       /*                MAIN PROGRAM                 */
+       /*                                             */
+       /***********************************************/ 
+
+  %let _space = %str(); 
+  %let W = W;
+  %let callin = 0;     /*  Before calling linear prog */
+  %let useold = 0;     /*  No old theta available yet */
+  %let test = 0;       /*  No linearity test yet      */
+  %let reml=1;         /*  Use REML routine           */
+
+  %setconst;
+
+  %if &smth=0 %then %do;
+    %if &method=ML %then
+      %prog0;
+    %else
+      %prog1;
+  %end;
+  %else %then %do;
+    %if &lam=0 %then
+      %prog2;
+    %else
+      %prog3;
+  %end;
+
+  %if &print^=N %then
+    %outinfo;
+
+  %if &print^=N or %length(&outvar)>0 or %length(&outvstd)>0 %then
+    %outvarn;
+
+  %if &smth=1 %then %do;
+    MM1 = Cinv * C0;
+    MM2 = MM1 * Cinv;
+  %end;
+
+  %if &prnfix=S or %length(&outbeta)>0 or %length(&outbstd)>0 %then  
+    %outparm;
+
+  %if &prnran=S or %length(&outran_F)>0  or %length(&outran_B)>0 %then
+    %outrand;
+
+  %if &prs>0 and %length(&outprs)>0 %then
+    %outprocs;
+
+  %if &smth=1 %then
+    %outputf;
+
+  %if &lintest=Y %then
+    %testlin;
+
+quit;
+
+
+
+  /* Print the information for covariance matrix */
+%if &print^=N %then %do;
+  %str( Title2 "Estimates of the variance components";
+        proc print data=Var_se;
+        id cov_parm;
+        var estimate se chisq p_value;
+        format estimate se chisq 7.4 p_value 6.4;
+        run;);   
+
+   /*  Output fixed effects if requested   */
+%if &prnfix=S and &nxs>0 %then %do;
+  %if &smth=0 %then
+  %str( Title2 "Estimates of the fixed effects";
+        proc print data=beta_se;
+        id xnames;
+        var beta se chisq p_value;
+        format beta se chisq 7.4 p_value 6.4;
+        run;);
+  %else
+  %str( Title2 "Estimates of the fixed effects";
+        proc print data=beta_se;
+        id xnames;
+        var beta F_se F_chisq F_p B_se B_chisq B_p;
+        format beta F_se F_chisq B_se B_chisq 7.4 F_p B_p 6.4;
+        run;);
+  %end;
+
+   /*  Output random effects if requested   */
+%if &prnran=S and &nzs>0 %then %do;
+  %if &smth=0 %then
+  %str( Title2 "Estimates of the random effects";
+        proc print data=ran_std;
+        id parm;
+        var subject estimate se chisq p_value;
+        format estimate se chisq 7.4 p_value 6.4;
+        run;);
+   %else
+   %str( Title2 "Estimates of the random effects";
+        proc print data=ran_std;
+        id parm;
+        var subject estimate F_se F_chisq F_p B_se B_chisq B_p;
+        format estimate F_se F_chisq B_se B_chisq 7.4 F_p B_p 6.4;
+        run;);
+  %end;   
+%end;
+
+
+%let dataset= Var_se;
+%if &prnfix=S and &nxs>0 %then
+  %let dataset=&dataset beta_se;
+%if &prnran=S and &nzs>0 %then
+  %let dataset=&dataset ran_std;  
+
+proc datasets nolist;
+  delete _setup _knots _nobs _subject
+   %if &print^=N %then &dataset;
+  ;  
+run;  
+
+  /*  Clear titles and footnotes */
+
+  title ' ';
+
+  footnote ' ';
+
+%exit: %mend spmm;
